@@ -4,6 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import FolderPicker from "./components/folder-picker";
 import TypeDocGenerator from "./components/type-doc-generation";
+import PreviewDocs from "./components/preview-doc";
 
 export default function Page() {
   return (
@@ -15,7 +16,11 @@ export default function Page() {
           <Separator orientation="vertical" className="mr-2 h-4" />
           <FolderPicker />
         </header>
-        <TypeDocGenerator />
+
+        <main className="flex">
+          <TypeDocGenerator />
+          <PreviewDocs />
+        </main>
       </SidebarInset>
     </SidebarProvider>
   );
