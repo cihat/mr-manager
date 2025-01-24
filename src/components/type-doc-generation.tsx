@@ -1,103 +1,40 @@
-import { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Folder, RefreshCw } from "lucide-react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useState, useEffect } from 'react';
+import { readDir } from "@tauri-apps/plugin-fs";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Folder } from "lucide-react";
+import useStore from '../store';
 
-interface TypeDocGeneratorProps {
-  onComplete?: (path: string) => void;
-}
+const FolderList = () => {
+  const [folders, setFolders] = useState([]);
+  const monoRepoPath = useStore(state => state.monoRepoPath) || '/Users/cihatsalik/www/frontend';
 
-const TypeDocGenerator: React.FC<TypeDocGeneratorProps> = ({ onComplete }) => {
-  const [path, setPath] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<boolean>(false);
-
-  const selectDirectory = async (): Promise<void> => {
-    try {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.webkitdirectory = true;
-
-      input.onchange = (e) => {
-        const files = (e.target as HTMLInputElement).files;
-        if (files && files.length > 0) {
-          setPath(files[0].path);
-        }
-      };
-
-      input.click();
-    } catch (err) {
-      setError('Failed to select directory');
-    }
-  };
-
-  const generateDocs = async (): Promise<void> => {
-    if (!path) {
-      setError('Please select a project directory');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    setSuccess(false);
-
-    try {
-      // Here you would implement your documentation generation logic
-      // For now, we'll simulate success
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSuccess(true);
-      onComplete?.(path);
-    } catch (err) {
-      setError(`Failed to generate documentation: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    const loadFolders = async () => {
+      if (!monoRepoPath) return;
+      try {
+        const entries = await readDir(monoRepoPath, { recursive: false });
+        setFolders(entries);
+      } catch (err) {
+        console.error('Failed to read directory:', err);
+      }
+    };
+    loadFolders();
+  }, [monoRepoPath]);
 
   return (
-    <Card className="w-full max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>TypeDoc Documentation Generator</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex space-x-2">
-          <Input
-            value={path}
-            onChange={(e) => setPath(e.target.value)}
-            placeholder="Project directory path"
-            className="flex-1"
-          />
-          <Button onClick={selectDirectory} variant="outline">
-            <Folder className="w-4 h-4 mr-2" />
-            Browse
-          </Button>
-        </div>
-        <Button
-          onClick={generateDocs}
-          disabled={loading || !path}
-          className="w-full"
-        >
-          {loading && <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
-          Generate Documentation
-        </Button>
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {success && (
-          <Alert>
-            <AlertDescription>
-              Documentation generated successfully in {path}/docs
-            </AlertDescription>
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
+    <div className="max-h-[calc(100vh-64px)] overflow-scroll w-64 bg-gray-50 border-r">
+      <ScrollArea className="p-4">
+        {folders.map((folder) => (
+          <div key={folder.name} className="mb-2">
+            <div className="flex items-center gap-2 w-full p-2 hover:bg-gray-100 rounded-lg">
+              <Folder className="w-5 h-5 text-blue-500" />
+              <span className="text-sm">{folder.name}</span>
+            </div>
+          </div>
+        ))}
+      </ScrollArea>
+    </div>
   );
 };
 
-export default TypeDocGenerator;
+export default FolderList;

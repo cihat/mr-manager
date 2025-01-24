@@ -24,6 +24,12 @@
           "sidecar": false
         }
       ]
-    }
+    },
+    "fs:default",
+    "fs:default",
+    "fs:default",
+    "fs:default",
+    "dialog:default",
+    "os:default"
   ]
 }

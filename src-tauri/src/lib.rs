@@ -1,6 +1,3 @@
-// main.rs
-use tauri::Manager;
-
 #[tauri::command]
 fn greet(name: &str) -> String {
   format!("Hello, {}! You've been greeted from Rust!", name)
@@ -34,6 +31,9 @@ async fn generate_docs(path: String) -> Result<String, String> {
 pub fn run() {
   tauri::Builder::default()
     .invoke_handler(tauri::generate_handler![greet, generate_docs]) // Combined into single handler
+    .plugin(tauri_plugin_dialog::init())
+    .plugin(tauri_plugin_fs::init())
+    .plugin(tauri_plugin_os::init())
     .plugin(tauri_plugin_shell::init())
     .plugin(tauri_plugin_opener::init())
     .run(tauri::generate_context!())
