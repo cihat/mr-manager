@@ -6,7 +6,7 @@ import useStore from '../store';
 
 const FolderList = () => {
   const [folders, setFolders] = useState([]);
-  const monoRepoPath = useStore(state => state.monoRepoPath) || '/Users/cihatsalik/www/frontend';
+  const monoRepoPath = useStore(state => state.monoRepoPath);
 
   useEffect(() => {
     const loadFolders = async () => {
@@ -21,11 +21,15 @@ const FolderList = () => {
     loadFolders();
   }, [monoRepoPath]);
 
+  const handleFolderClick = (folder) => {
+    console.log('Folder clicked:', folder);
+  }
+
   return (
     <div className="max-h-[calc(100vh-64px)] overflow-scroll w-64 bg-gray-50 border-r">
-      <ScrollArea className="p-4">
+      <ScrollArea>
         {folders.map((folder) => (
-          <div key={folder.name} className="mb-2">
+          <div key={folder.name} className="mb-2 cursor-pointer" onClick={() => handleFolderClick(folder)}>
             <div className="flex items-center gap-2 w-full p-2 hover:bg-gray-100 rounded-lg">
               <Folder className="w-5 h-5 text-blue-500" />
               <span className="text-sm">{folder.name}</span>

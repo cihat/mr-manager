@@ -15,9 +15,7 @@ export default function Page() {
           <Separator orientation="vertical" className="mr-2 h-4" />
           <FolderPicker />
         </header>
-          <TypeDocGenerator />
-        {/* <main className="flex-1 p-4">
-        </main> */}
+        <TypeDocGenerator />
       </SidebarInset>
     </SidebarProvider>
   );
