@@ -7,6 +7,8 @@ interface StoreState {
   monoRepoPath: string;
   selectedFolder: string | null;
   error: string;
+  currentGeneratedFolder: string;
+  setCurrentGeneratedFolder: (folderName: string) => void;
   setError: (error: string) => void;
   setMonoRepoPath: (path: string) => void;
   resetMonoRepoPath: () => void;
@@ -19,6 +21,8 @@ const useStore = create<StoreState>()(
       monoRepoPath: '',
       selectedFolder: null,
       error: '',
+      currentGeneratedFolder: '',
+      setCurrentGeneratedFolder: (folderName) => set({ currentGeneratedFolder: folderName }),
       setMonoRepoPath: (path) => set({ monoRepoPath: path }),
       resetMonoRepoPath: () => set({ monoRepoPath: '' }),
       setSelectedFolder: (folder) => set({ selectedFolder: folder }),

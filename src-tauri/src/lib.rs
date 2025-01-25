@@ -1,9 +1,4 @@
 #[tauri::command]
-fn greet(name: &str) -> String {
-  format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
-#[tauri::command]
 async fn generate_docs(path: String) -> Result<String, String> {
   let project_name = std::path::Path::new(&path)
     .file_name()
@@ -18,7 +13,6 @@ async fn generate_docs(path: String) -> Result<String, String> {
   };
 
   let home_dir = dirs::home_dir().ok_or_else(|| "Could not find home directory".to_string())?;
-
   let docs_path = home_dir
     .join("mr-analyzer")
     .join(project_name)
@@ -39,8 +33,6 @@ async fn generate_docs(path: String) -> Result<String, String> {
       &docs_path,
     ],
     "js" => vec!["jsdoc", "-r", "src", "-d", &docs_path],
-    "py" => vec!["pdoc", "--html", "-o", &docs_path, "src"],
-    "rs" => vec!["cargo", "doc", "--target-dir", &docs_path],
     _ => return Err(format!("Unsupported file type: {}", file_type)),
   };
 
@@ -57,13 +49,12 @@ async fn generate_docs(path: String) -> Result<String, String> {
 
   Ok(docs_path)
 }
-
 #[tauri::command]
 fn read_file(path: String) -> Result<String, String> {
-    match std::fs::read_to_string(&path) {
-        Ok(contents) => Ok(contents),
-        Err(e) => Err(e.to_string()),
-    }
+  match std::fs::read_to_string(&path) {
+    Ok(contents) => Ok(contents),
+    Err(e) => Err(e.to_string()),
+  }
 }
 
 #[tauri::command]
@@ -74,7 +65,11 @@ fn file_exists(path: String) -> bool {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![greet, generate_docs, read_file, file_exists]) // Combined into single handler
+    .invoke_handler(tauri::generate_handler![
+      generate_docs,
+      read_file,
+      file_exists
+    ]) // Combined into single handler
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
     .plugin(tauri_plugin_os::init())

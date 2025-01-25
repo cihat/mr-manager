@@ -9,7 +9,7 @@ import { Loader2, Folder, FileWarning } from "lucide-react";
 
 const PreviewDocs = () => {
   const [loading, setLoading] = useState(false);
-  const { error, setError, selectedFolder } = useStore();
+  const { error, setError, selectedFolder, currentGeneratedFolder } = useStore();
   const [assetUrl, setAssetUrl] = useState('');
 
   const handleFolderSelect = async () => {
@@ -18,7 +18,7 @@ const PreviewDocs = () => {
     try {
       const homeDirPath = await homeDir();
       const folderPath = await join(homeDirPath, 'mr-analyzer', selectedFolder || '');
-      const assetUrl = await convertFileSrc(folderPath);
+      const assetUrl = convertFileSrc(folderPath);
       const isExist = await invoke('file_exists', { path: `${folderPath}/index.html` });
 
       if (!isExist) {
@@ -37,22 +37,7 @@ const PreviewDocs = () => {
     if (selectedFolder) {
       handleFolderSelect();
     }
-  }, [selectedFolder]);
-
-  // Rest of the component remains the same
-  if (!selectedFolder) {
-    return (
-      <Card className="w-full h-full flex items-center justify-center p-8 bg-background rounded-none border-none">
-        <div className="text-center space-y-4">
-          <Folder className="w-12 h-12 text-gray-400 mx-auto" />
-          <AlertTitle className="text-lg font-medium">No Folder Selected</AlertTitle>
-          <AlertDescription className="text-gray-500">
-            Please select a folder to preview the documentation
-          </AlertDescription>
-        </div>
-      </Card>
-    );
-  }
+  }, [selectedFolder, currentGeneratedFolder]);
 
   return (
     <Card className="w-full h-full p-2 bg-background rounded-none border-none">
@@ -73,17 +58,29 @@ const PreviewDocs = () => {
             </Alert>
           </div>
         </div>
-      ) : (
-        <div className="w-full h-full min-h-96 relative bg-white rounded-lg overflow-hidden">
-          <iframe
-            src={`${assetUrl}/index.html`}
-            className="w-full h-full border-0"
-            sandbox="allow-scripts allow-same-origin"
-            title="HTML Preview"
-          />
-        </div>
-      )}
-    </Card>
+      ) : !selectedFolder ? (
+        <Card className="w-full h-full flex items-center justify-center p-8 bg-background rounded-none border-none">
+          <div className="text-center space-y-4">
+            <Folder className="w-12 h-12 text-gray-400 mx-auto" />
+            <AlertTitle className="text-lg font-medium">No Folder Selected</AlertTitle>
+            <AlertDescription className="text-gray-500">
+              Please select a folder to preview the documentation
+            </AlertDescription>
+          </div>
+        </Card>
+      )
+        : (
+          <div className="w-full h-full min-h-96 relative bg-white rounded-lg overflow-hidden">
+            <iframe
+              src={`${assetUrl}/index.html`}
+              className="w-full h-full border-0"
+              sandbox="allow-scripts allow-same-origin"
+              title="HTML Preview"
+            />
+          </div>
+        )
+      }
+    </Card >
   );
 };
 

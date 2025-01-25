@@ -12,7 +12,7 @@ const FolderList = () => {
   const [folders, setFolders] = useState(null);
   const [tsProjects, setTsProjects] = useState(new Set());
   const [loadingFolder, setLoadingFolder] = useState('');
-  const { monoRepoPath, selectedFolder, setError, setSelectedFolder } = useStore();
+  const { monoRepoPath, selectedFolder, setError, setSelectedFolder, setCurrentGeneratedFolder } = useStore();
 
   useEffect(() => {
     const loadFolders = async () => {
@@ -45,6 +45,7 @@ const FolderList = () => {
       setLoadingFolder(folder.name);
       const libPath = `${monoRepoPath}/${folder.name}`;
       await invoke('generate_docs', { path: libPath });
+      setCurrentGeneratedFolder(folder.name);
       toast.success('Documentation generated successfully');
       setError('');
     } catch (error) {
