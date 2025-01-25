@@ -3,6 +3,8 @@ import { Card } from '@/components/ui/card';
 import useStore from '@/store';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
+import { homeDir } from '@tauri-apps/api/path';
+import { join } from '@tauri-apps/api/path';
 import { Loader2, Folder, FileWarning } from "lucide-react";
 
 const PreviewDocs = () => {
@@ -14,21 +16,22 @@ const PreviewDocs = () => {
     setLoading(true);
     setError('');
     try {
-      const folderPath = `/Users/cihatsalik/mr-analyzer/${selectedFolder}`;
+      const homeDirPath = await homeDir();
+      const folderPath = await join(homeDirPath, 'mr-analyzer', selectedFolder || '');
       const assetUrl = await convertFileSrc(folderPath);
-
       const isExist = await invoke('file_exists', { path: `${folderPath}/index.html` });
+
       if (!isExist) {
         setError('Please generate documentation first.');
       }
-
       setAssetUrl(assetUrl);
     } catch (err) {
       setError('Failed to load documentation');
+      console.error(err);
     } finally {
       setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
     if (selectedFolder) {
@@ -36,6 +39,7 @@ const PreviewDocs = () => {
     }
   }, [selectedFolder]);
 
+  // Rest of the component remains the same
   if (!selectedFolder) {
     return (
       <Card className="w-full h-full flex items-center justify-center p-8 bg-background rounded-none border-none">

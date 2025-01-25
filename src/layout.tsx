@@ -5,8 +5,13 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 import FolderPicker from "./components/folder-picker";
 import TypeDocGenerator from "./components/type-doc-generation";
 import PreviewDocs from "./components/preview-doc";
+import { ReactNode } from "react";
 
-export default function Page() {
+interface LayoutProps {
+  children: ReactNode;
+}
+
+export default function Layout({ }: LayoutProps) {
   return (
     <SidebarProvider defaultOpen={false}>
       <AppSidebar />
@@ -16,7 +21,6 @@ export default function Page() {
           <Separator orientation="vertical" className="mr-2 h-4" />
           <FolderPicker />
         </header>
-
         <main className="flex h-full">
           <TypeDocGenerator />
           <PreviewDocs />
