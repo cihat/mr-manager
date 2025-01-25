@@ -76,7 +76,7 @@ const FolderList = () => {
                 <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
               ) : (
                 <FileText
-                  className='text-green-400 min-w-[24px] min-h-[24px] bg-yellow-200 p-1 box-content rounded-lg'
+                  className='text-blue-400 min-w-[24px] min-h-[24px] bg-blue-200 p-1 box-content rounded-lg'
                   onClick={(e) => {
                     e.stopPropagation();
                     generateDocsForFolder(folder);
