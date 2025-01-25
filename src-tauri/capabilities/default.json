@@ -10,6 +10,16 @@
     "opener:default",
     "shell:default",
     {
+      "identifier": "fs:scope",
+      "allow": [
+        {
+          "path": "**/*",
+          "read": true,
+          "write": true
+        }
+      ]
+    },
+    {
       "identifier": "shell:allow-execute",
       "allow": [
         {
@@ -20,14 +30,10 @@
             {
               "validator": "\\S+"
             }
-          ],
-          "sidecar": false
+          ]
         }
       ]
     },
-    "fs:default",
-    "fs:default",
-    "fs:default",
     "fs:default",
     "dialog:default",
     "os:default"
