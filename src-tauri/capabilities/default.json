@@ -13,7 +13,12 @@
       "identifier": "fs:scope",
       "allow": [
         {
-          "path": "**/*",
+          "path": "$HOME/**",
+          "read": true,
+          "write": true
+        },
+        {
+          "path": "**",
           "read": true,
           "write": true
         }
