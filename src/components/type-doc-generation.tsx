@@ -38,7 +38,6 @@ const FolderList = () => {
     })
     console.log('libPath >>', libPath)
 
-
     invoke('generate_docs', { path: libPath });
   }
 
@@ -57,7 +56,7 @@ const FolderList = () => {
                 <Folder className="w-5 h-5 text-blue-500" />
                 <span className="text-sm ml-2">{folder.name}</span>
               </div>
-              <FileText className='text-green-500 min-w-[24px] min-h-[24px' onClick={() => generateDocsForFolder(folder)} />
+              <FileText className='text-green-500 min-w-[24px] min-h-[24px]' onClick={() => generateDocsForFolder(folder)} />
             </div>
           </div>
         ))}

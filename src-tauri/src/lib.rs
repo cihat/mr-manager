@@ -57,10 +57,24 @@ async fn generate_docs(path: String) -> Result<String, String> {
 
   Ok(docs_path)
 }
+
+#[tauri::command]
+fn read_file(path: String) -> Result<String, String> {
+    match std::fs::read_to_string(&path) {
+        Ok(contents) => Ok(contents),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+fn file_exists(path: String) -> bool {
+  std::path::Path::new(&path).exists()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
-    .invoke_handler(tauri::generate_handler![greet, generate_docs]) // Combined into single handler
+    .invoke_handler(tauri::generate_handler![greet, generate_docs, read_file, file_exists]) // Combined into single handler
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
     .plugin(tauri_plugin_os::init())

@@ -17,7 +17,7 @@ export default function Page() {
           <FolderPicker />
         </header>
 
-        <main className="flex">
+        <main className="flex h-full">
           <TypeDocGenerator />
           <PreviewDocs />
         </main>
