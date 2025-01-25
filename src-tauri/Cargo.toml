@@ -27,4 +27,6 @@ dirs = "6.0.0"
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-os = "2"
+tauri-plugin-log = "2"
+chrono = "0.4.39"
 

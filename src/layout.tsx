@@ -1,4 +1,3 @@
-// page.tsx
 import { AppSidebar } from "@/components/app-sidebar";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -6,6 +5,7 @@ import FolderPicker from "./components/folder-picker";
 import TypeDocGenerator from "./components/type-doc-generation";
 import PreviewDocs from "./components/preview-doc";
 import { ReactNode } from "react";
+import { Toaster } from "./components/ui/toaster";
 
 interface LayoutProps {
   children: ReactNode;
@@ -25,6 +25,7 @@ export default function Layout({ }: LayoutProps) {
           <TypeDocGenerator />
           <PreviewDocs />
         </main>
+        <Toaster />
       </SidebarInset>
     </SidebarProvider>
   );

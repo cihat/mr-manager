@@ -5,14 +5,17 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Folder, FileText, Type, Loader2 } from "lucide-react";
 import useStore from '../store';
 import { invoke } from '@tauri-apps/api/core';
-import { toast } from '@/hooks/use-toast';
+// import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
+import { useToast } from '@/hooks/use-toast';
 
 const FolderList = () => {
   const [folders, setFolders] = useState(null);
   const [tsProjects, setTsProjects] = useState(new Set());
   const [loadingFolder, setLoadingFolder] = useState('');
   const { monoRepoPath, selectedFolder, setError, setSelectedFolder, setCurrentGeneratedFolder } = useStore();
+
+  const { toast } = useToast();
 
   useEffect(() => {
     const loadFolders = async () => {
@@ -44,9 +47,14 @@ const FolderList = () => {
     try {
       setLoadingFolder(folder.name);
       const libPath = `${monoRepoPath}/${folder.name}`;
-      await invoke('generate_docs', { path: libPath });
+      const result = await invoke('generate_docs', { path: libPath });
       setCurrentGeneratedFolder(folder.name);
-      toast.success('Documentation generated successfully');
+      toast({
+        title: `Documentation Generated: ${result}`,
+        description: `Documentation generated for ${folder.name}`,
+        status: 'success',
+        
+      });
       setError('');
     } catch (error) {
       toast.error('Failed to generate documentation');
