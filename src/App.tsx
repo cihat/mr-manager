@@ -1,11 +1,16 @@
-
-import Layout from "@/layout"
-import FolderPicker from "./components/folder-picker";
+import { Routes, Route } from "react-router";
+import Layout from "@/layout";
+import Docs from "@/view/Docs"
+import Apps from "@/view/Apps"
 
 function App() {
   return (
     <Layout>
-      <FolderPicker />
+      <Routes>
+        <Route path="/apps" element={<Apps />} />
+        <Route path="/docs" element={<Docs />} />
+        {/* <Route path="/preview" element={<PreviewDocs />} /> */}
+      </Routes>
     </Layout>
   );
 }

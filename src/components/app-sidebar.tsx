@@ -1,5 +1,5 @@
 import { BookMarked, AppWindowMac } from "lucide-react"
-
+import { Link, useLocation } from "react-router"
 import {
   Sidebar,
   SidebarContent,
@@ -11,36 +11,23 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-// Menu items.
 const items = [
+  {
+    title: "Apps",
+    url: "/apps",
+    icon: AppWindowMac,
+    isComingSoon: true
+  },
   {
     title: "Docs",
     url: "/docs",
     icon: BookMarked
   },
-  {
-    title: "Apps",
-    url: "/apps",
-    icon: AppWindowMac,
-  },
-  // {
-  //   title: "Calendar",
-  //   url: "#",
-  //   icon: Calendar,
-  // },
-  // {
-  //   title: "Search",
-  //   url: "#",
-  //   icon: Search,
-  // },
-  // {
-  //   title: "Settings",
-  //   url: "#",
-  //   icon: Settings,
-  // },
 ]
 
 export function AppSidebar() {
+  const location = useLocation();
+
   return (
     <Sidebar>
       <SidebarContent>
@@ -50,11 +37,18 @@ export function AppSidebar() {
             <SidebarMenu>
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <a href={item.url}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname === item.url}
+                  >
+                    <Link to={item.url}>
                       <item.icon />
                       <span>{item.title}</span>
-                    </a>
+                      {item.isComingSoon && (
+                        <span className="text-xs text-gray-400 ml-auto">Coming Soon</span>
+                      )}
+                    </Link>
+                    
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
