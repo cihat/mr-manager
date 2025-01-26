@@ -3,10 +3,10 @@ import PreviewDocs from '@/components/preview-doc';
 
 const Docs = () => {
   return (
-    <>
+    <div className='bg-background flex w-full h-full'>
       <TypeDocGenerator />
       <PreviewDocs />
-    </>
+    </div>
   )
 }
 

@@ -19,7 +19,7 @@ export default function Layout({ children }: LayoutProps) {
           <Separator orientation="vertical" className="mr-2 h-4" />
           <FolderPicker />
         </header>
-        <main className="flex h-full">
+        <main className="flex h-full bg-background">
           {children}
         </main>
         <Toaster />

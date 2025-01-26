@@ -20,7 +20,7 @@ interface FolderListProps {
 const FolderList: React.FC<FolderListProps> = ({ folders = [], onClick, handleGenerateDoc, children }) => {
   if (!folders?.length) {
     return (
-      <div className="p-4">
+      <div className="p-4 bg-background h-full">
         <Card className="border-dashed">
           <CardHeader>
             <CardTitle className="text-lg">No Folders Found</CardTitle>
@@ -29,7 +29,7 @@ const FolderList: React.FC<FolderListProps> = ({ folders = [], onClick, handleGe
             </CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
-            <Folder className="w-12 h-12 text-gray-400" />
+            <Folder className="w-12 h-12 text-muted-foreground" />
           </CardContent>
         </Card>
       </div>
@@ -37,26 +37,27 @@ const FolderList: React.FC<FolderListProps> = ({ folders = [], onClick, handleGe
   }
 
   return (
-    <ScrollArea className="p-2">
+    <ScrollArea className="p-2 bg-background">
       {folders.map((folder) => (
         <div
           key={folder.name}
-          className="mb-2"
+          className="mb-2 border border-transparent"
           onClick={() => onClick?.(folder)}
         >
-          <div className={`flex items-center justify-between gap-2 w-full p-2 hover:bg-gray-100 rounded-lg ${folder.isSelected ? 'bg-gray-200' : ''}`}>
+          <div className={`flex items-center justify-between gap-2 w-full p-2 hover:bg-muted rounded-lg ${folder.isSelected ? 'bg-accent' : ''
+            }`}>
             <div className="flex">
-              <Folder className="w-5 h-5 text-purple-500" />
+              <Folder className="w-5 h-5 text-primary" />
               <span className="text-sm ml-2">{folder.name}</span>
               {folder.isTypeScript && (
-                <Type className="w-4 h-4 ml-2 text-blue-500" />
+                <Type className="w-4 h-4 ml-2 text-primary" />
               )}
             </div>
             {folder.isLoading ? (
-              <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
+              <Loader2 className="w-6 h-6 text-primary animate-spin" />
             ) : (
               <FileText
-                className="text-blue-400 min-w-[24px] min-h-[24px] bg-blue-200 p-1 box-content rounded-lg"
+                className="text-primary min-w-[24px] min-h-[24px] bg-accent p-1 box-content rounded-lg"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleGenerateDoc?.(folder);

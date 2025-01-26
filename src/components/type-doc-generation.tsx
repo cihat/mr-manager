@@ -85,8 +85,8 @@ const TypeDocGeneration = ({ children }: FolderContainerProps) => {
   }));
 
   return (
-    <div className="max-h-[calc(100vh-64px)] cursor-pointer overflow-scroll min-w-72 bg-gray-50 border-r">
-      <div className="flex items-center pl-3 pt-2 pb-0">
+    <div className="max-h-[calc(100vh-64px)] cursor-pointer overflow-scroll min-w-72 bg-gray-50 ">
+      <div className="flex items-center pl-3 pt-2 pb-0 bg-background">
         <Library className='w-8 h-8' />
         <h3 className='font-semibold text-2xl'>Libs</h3>
       </div>
