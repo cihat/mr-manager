@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { readDir } from "@tauri-apps/plugin-fs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Folder, FileText, Type, Loader2 } from "lucide-react";
+import { Folder, FileText, Type, Loader2, Library } from "lucide-react";
 import useStore from '../store';
 import { invoke } from '@tauri-apps/api/core';
 // import { useToast } from '@/hooks/use-toast';
@@ -13,20 +13,22 @@ const FolderList = () => {
   const [folders, setFolders] = useState(null);
   const [tsProjects, setTsProjects] = useState(new Set());
   const [loadingFolder, setLoadingFolder] = useState('');
-  const { monoRepoPath, selectedFolder, setError, setSelectedFolder, setCurrentGeneratedFolder } = useStore();
+  const { monoRepoPath, selectedFolder, getLibsPath, setError, setSelectedFolder, setCurrentGeneratedFolder } = useStore();
 
   const { toast } = useToast();
 
   useEffect(() => {
     const loadFolders = async () => {
       if (!monoRepoPath) return;
+
+      const libsPath = getLibsPath(monoRepoPath);
       try {
-        const entries = await readDir(monoRepoPath, { recursive: false });
+        const entries = await readDir(libsPath);
         const tsProjectNames = new Set();
         for (const folder of entries) {
-          const libPath = `${monoRepoPath}/${folder.name}`;
+          const libPath = `${libsPath}/${folder.name}`;
           try {
-            const files = await readDir(libPath, { recursive: false });
+            const files = await readDir(libPath);
             if (files.some(f => f.name === 'tsconfig.json')) {
               tsProjectNames.add(folder.name);
             }
@@ -43,21 +45,23 @@ const FolderList = () => {
     loadFolders();
   }, [monoRepoPath]);
 
-  const generateDocsForFolder = async (folder) => {
+  const generateDocsForFolder = async (folder: any) => {
     try {
       setLoadingFolder(folder.name);
-      const libPath = `${monoRepoPath}/${folder.name}`;
+      const libPath = `${getLibsPath(monoRepoPath)}/${folder.name}`;
       const result = await invoke('generate_docs', { path: libPath });
       setCurrentGeneratedFolder(folder.name);
       toast({
         title: `Documentation Generated: ${result}`,
         description: `Documentation generated for ${folder.name}`,
-        status: 'success',
-        
       });
       setError('');
     } catch (error) {
-      toast.error('Failed to generate documentation');
+      toast({
+        title: 'Failed to generate documentation',
+        description: `Failed to generate documentation for ${folder.name}`,
+        variant: 'destructive'
+      })
       setError('Failed to generate documentation');
     } finally {
       setLoadingFolder('');
@@ -67,6 +71,11 @@ const FolderList = () => {
 
   return (
     <div className="max-h-[calc(100vh-64px)] cursor-pointer overflow-scroll min-w-72 bg-gray-50 border-r">
+      <div className="flex items-center pl-3 pt-2 pb-0">
+        <Library className='w-8 h-8' />
+        <h3 className='font-semibold text-2xl'>Libs</h3>
+      </div>
+
       <ScrollArea className='p-2'>
         {folders?.length > 0 ? folders.map((folder) => (
           <div

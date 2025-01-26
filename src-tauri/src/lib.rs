@@ -14,7 +14,7 @@ async fn generate_docs(path: String) -> Result<String, String> {
 
   let home_dir = dirs::home_dir().ok_or_else(|| "Could not find home directory".to_string())?;
   let docs_path = home_dir
-    .join("mr-analyzer")
+    .join("mr-manager")
     .join(project_name)
     .to_str()
     .ok_or_else(|| "Invalid path".to_string())?

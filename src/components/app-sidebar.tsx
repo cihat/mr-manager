@@ -1,4 +1,4 @@
-import { BookMarked } from "lucide-react"
+import { BookMarked, AppWindowMac } from "lucide-react"
 
 import {
   Sidebar,
@@ -15,14 +15,14 @@ import {
 const items = [
   {
     title: "Docs",
-    url: "#",
+    url: "/docs",
     icon: BookMarked
   },
-  // {
-  //   title: "Inbox",
-  //   url: "#",
-  //   icon: Inbox,
-  // },
+  {
+    title: "Apps",
+    url: "/apps",
+    icon: AppWindowMac,
+  },
   // {
   //   title: "Calendar",
   //   url: "#",
@@ -45,7 +45,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Application</SidebarGroupLabel>
+          <SidebarGroupLabel>Monorepo Manager</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item) => (

@@ -8,6 +8,7 @@ interface StoreState {
   selectedFolder: string | null;
   error: string;
   currentGeneratedFolder: string;
+  getLibsPath: (monoRepoPath: string) => string;
   setCurrentGeneratedFolder: (folderName: string) => void;
   setError: (error: string) => void;
   setMonoRepoPath: (path: string) => void;
@@ -22,6 +23,11 @@ const useStore = create<StoreState>()(
       selectedFolder: null,
       error: '',
       currentGeneratedFolder: '',
+      getLibsPath: (monoRepoPath) => {
+        if (!monoRepoPath) return '';
+
+        return `${monoRepoPath}/packages/libs`;
+      },
       setCurrentGeneratedFolder: (folderName) => set({ currentGeneratedFolder: folderName }),
       setMonoRepoPath: (path) => set({ monoRepoPath: path }),
       resetMonoRepoPath: () => set({ monoRepoPath: '' }),

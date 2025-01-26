@@ -17,7 +17,7 @@ const PreviewDocs = () => {
     setError('');
     try {
       const homeDirPath = await homeDir();
-      const folderPath = await join(homeDirPath, 'mr-analyzer', selectedFolder || '');
+      const folderPath = await join(homeDirPath, 'mr-manager', selectedFolder || '');
       const assetUrl = convertFileSrc(folderPath);
       const isExist = await invoke('file_exists', { path: `${folderPath}/index.html` });
 
