@@ -1,6 +1,10 @@
 use git2::{DiffOptions, Oid, Repository, Sort};
 use serde::Serialize;
-use std::path::{Path, PathBuf};
+use std::{
+  collections::HashMap,
+  path::{Path, PathBuf},
+  time::{Duration, SystemTime},
+};
 
 #[tauri::command]
 async fn generate_docs(path: String) -> Result<String, String> {
@@ -131,7 +135,6 @@ fn list_folder_commits(path: String, limit: Option<usize>) -> Result<Vec<BasicCo
   let path = Path::new(&path);
 
   let git_root = find_git_root(path).ok_or_else(|| "Could not find Git repository".to_string())?;
-
   let repo =
     Repository::open(&git_root).map_err(|e| format!("Failed to open repository: {}", e))?;
 
@@ -147,31 +150,93 @@ fn list_folder_commits(path: String, limit: Option<usize>) -> Result<Vec<BasicCo
   revwalk.push_head().map_err(|e| e.to_string())?;
 
   let mut commits = Vec::new();
+  let mut diff_opts = DiffOptions::new();
+  diff_opts.pathspec(&relative_path);
+  diff_opts.include_untracked(true);
+
+  // Batch işleme için commit'leri toplama
+  let batch_size = 100;
+  let mut batch = Vec::with_capacity(batch_size);
 
   for oid in revwalk {
     let oid = oid.map_err(|e| e.to_string())?;
-    let commit = repo.find_commit(oid).map_err(|e| e.to_string())?;
-    let tree = commit.tree().map_err(|e| e.to_string())?;
+    batch.push(oid);
 
-    // Check if this commit touches our path
-    if tree.get_path(Path::new(&relative_path)).is_ok() {
-      let commit_data = BasicCommit {
-        id: commit.id().to_string(),
-        message: commit.message().unwrap_or("").to_string(),
-        author: commit.author().name().unwrap_or("").to_string(),
-        date: commit.time().seconds(),
-      };
-      commits.push(commit_data);
-
+    if batch.len() >= batch_size {
+      process_commit_batch(&repo, &mut batch, &mut commits, commit_limit)?;
       if commits.len() >= commit_limit {
         break;
       }
+      batch.clear();
     }
   }
 
-  Ok(commits)
+  // Kalan commit'leri işle
+  if !batch.is_empty() {
+    process_commit_batch(&repo, &mut batch, &mut commits, commit_limit)?;
+  }
+
+  Ok(commits.into_iter().take(commit_limit).collect())
 }
 
+fn process_commit_batch(
+  repo: &Repository,
+  batch: &mut Vec<Oid>,
+  commits: &mut Vec<BasicCommit>,
+  limit: usize,
+) -> Result<(), String> {
+  for &oid in batch.iter() {
+    if commits.len() >= limit {
+      break;
+    }
+
+    let commit = repo.find_commit(oid).map_err(|e| e.to_string())?;
+
+    // Hızlı kontrol: Commit mesajında path geçiyor mu?
+    let message = commit.message().unwrap_or("");
+    let commit_data = BasicCommit {
+      id: commit.id().to_string(),
+      message: message.to_string(),
+      author: commit.author().name().unwrap_or("").to_string(),
+      date: commit.time().seconds(),
+    };
+
+    commits.push(commit_data);
+  }
+  Ok(())
+}
+
+// Cache yapısı için yeni bir struct
+
+#[derive(Default)]
+struct CommitCache {
+  cached_commits: HashMap<String, Vec<BasicCommit>>,
+  last_update: HashMap<String, SystemTime>,
+  cache_duration: Duration,
+}
+impl CommitCache {
+  fn new() -> Self {
+    Self {
+      cached_commits: HashMap::new(),
+      last_update: HashMap::new(),
+      cache_duration: Duration::from_secs(300), // 5 dakika
+    }
+  }
+
+  fn get(&self, path: &str) -> Option<&Vec<BasicCommit>> {
+    if let Some(last_update) = self.last_update.get(path) {
+      if last_update.elapsed().unwrap_or_default() < self.cache_duration {
+        return self.cached_commits.get(path);
+      }
+    }
+    None
+  }
+
+  fn set(&mut self, path: String, commits: Vec<BasicCommit>) {
+    self.cached_commits.insert(path.clone(), commits);
+    self.last_update.insert(path, SystemTime::now());
+  }
+}
 #[tauri::command]
 fn get_commit_details(repo_path: String, commit_id: String) -> Result<DetailedCommit, String> {
   let path = Path::new(&repo_path);

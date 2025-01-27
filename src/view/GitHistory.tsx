@@ -161,7 +161,7 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
       const fullPath = `${basePath}/${folder.name}`;
       const commits = await invoke<BasicCommit[]>('list_folder_commits', {
         path: fullPath,
-        limit: 20
+        limit: 50
       });
       setCommits(commits);
       setError('');
@@ -211,15 +211,15 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
         </Alert>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="border rounded-lg">
+      <div className="grid grid-cols-4 gap-4">
+        <div className="border rounded-lg overflow-scroll max-h-[calc(100vh-136px)]">
           <FolderList
             folders={folders}
             onClick={handleFolderClick}
           />
         </div>
 
-        <div className="border rounded-lg p-4">
+        <div className="border rounded-lg p-4 col-span-3 overflow-scroll max-h-[calc(100vh-136px)]">
           {loading ? (
             <div className="flex justify-center items-center h-full">
               <div className="flex flex-col items-center gap-2">
