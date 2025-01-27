@@ -1,3 +1,7 @@
+use git2::{DiffOptions, Oid, Repository, Sort};
+use serde::Serialize;
+use std::path::{Path, PathBuf};
+
 #[tauri::command]
 async fn generate_docs(path: String) -> Result<String, String> {
   let project_name = std::path::Path::new(&path)
@@ -62,13 +66,205 @@ fn file_exists(path: String) -> bool {
   std::path::Path::new(&path).exists()
 }
 
+#[tauri::command]
+fn list_folders(path: String) -> Result<Vec<String>, String> {
+  let path = Path::new(&path);
+  if !path.exists() {
+    return Err("Path does not exist".to_string());
+  }
+
+  let entries = std::fs::read_dir(path)
+    .map_err(|e| e.to_string())?
+    .filter_map(|entry| {
+      let entry = entry.ok()?;
+      let path = entry.path();
+      if path.is_dir() {
+        path.file_name()?.to_str().map(String::from)
+      } else {
+        None
+      }
+    })
+    .collect();
+
+  Ok(entries)
+}
+
+#[derive(Serialize)]
+struct BasicCommit {
+  id: String,
+  message: String,
+  author: String,
+  date: i64,
+}
+
+#[derive(Serialize)]
+struct DetailedCommit {
+  id: String,
+  message: String,
+  author: String,
+  date: i64,
+  changes: Vec<GitChange>,
+}
+
+#[derive(Serialize)]
+struct GitChange {
+  status: String,
+  file: String,
+}
+
+fn find_git_root(start_path: &Path) -> Option<PathBuf> {
+  let mut current_path = start_path.to_path_buf();
+  loop {
+    let git_dir = current_path.join(".git");
+    if git_dir.exists() {
+      return Some(current_path);
+    }
+    if !current_path.pop() {
+      return None;
+    }
+  }
+}
+
+#[tauri::command]
+fn list_folder_commits(path: String, limit: Option<usize>) -> Result<Vec<BasicCommit>, String> {
+  let commit_limit = limit.unwrap_or(20);
+  let path = Path::new(&path);
+
+  let git_root = find_git_root(path).ok_or_else(|| "Could not find Git repository".to_string())?;
+
+  let repo =
+    Repository::open(&git_root).map_err(|e| format!("Failed to open repository: {}", e))?;
+
+  let relative_path = path
+    .strip_prefix(&git_root)
+    .map_err(|_| "Failed to get relative path".to_string())?
+    .to_str()
+    .ok_or_else(|| "Invalid path".to_string())?
+    .to_string();
+
+  let mut revwalk = repo.revwalk().map_err(|e| e.to_string())?;
+  revwalk.set_sorting(Sort::TIME).map_err(|e| e.to_string())?;
+  revwalk.push_head().map_err(|e| e.to_string())?;
+
+  let mut commits = Vec::new();
+
+  for oid in revwalk {
+    let oid = oid.map_err(|e| e.to_string())?;
+    let commit = repo.find_commit(oid).map_err(|e| e.to_string())?;
+    let tree = commit.tree().map_err(|e| e.to_string())?;
+
+    // Check if this commit touches our path
+    if tree.get_path(Path::new(&relative_path)).is_ok() {
+      let commit_data = BasicCommit {
+        id: commit.id().to_string(),
+        message: commit.message().unwrap_or("").to_string(),
+        author: commit.author().name().unwrap_or("").to_string(),
+        date: commit.time().seconds(),
+      };
+      commits.push(commit_data);
+
+      if commits.len() >= commit_limit {
+        break;
+      }
+    }
+  }
+
+  Ok(commits)
+}
+
+#[tauri::command]
+fn get_commit_details(repo_path: String, commit_id: String) -> Result<DetailedCommit, String> {
+  let path = Path::new(&repo_path);
+  let git_root = find_git_root(path).ok_or_else(|| "Could not find Git repository".to_string())?;
+
+  let repo =
+    Repository::open(&git_root).map_err(|e| format!("Failed to open repository: {}", e))?;
+
+  let relative_path = path
+    .strip_prefix(&git_root)
+    .map_err(|_| "Failed to get relative path".to_string())?
+    .to_str()
+    .ok_or_else(|| "Invalid path".to_string())?
+    .to_string();
+
+  let oid = Oid::from_str(&commit_id).map_err(|e| format!("Invalid commit ID: {}", e))?;
+
+  let commit = repo
+    .find_commit(oid)
+    .map_err(|e| format!("Failed to find commit: {}", e))?;
+
+  let tree = commit.tree().map_err(|e| e.to_string())?;
+
+  // Get parent tree or use empty tree for first commit
+  let parent_tree = if let Ok(parent) = commit.parent(0) {
+    parent.tree().map_err(|e| e.to_string())?
+  } else {
+    tree.clone()
+  };
+
+  let mut diff_opts = DiffOptions::new();
+  let diff = repo
+    .diff_tree_to_tree(Some(&parent_tree), Some(&tree), Some(&mut diff_opts))
+    .map_err(|e| e.to_string())?;
+
+  let mut changes = Vec::new();
+
+  diff
+    .foreach(
+      &mut |delta, _| {
+        if let Some(file_path) = delta.new_file().path() {
+          if let Some(file_path_str) = file_path.to_str() {
+            if file_path_str.starts_with(&relative_path) {
+              let change = GitChange {
+                status: match delta.status() {
+                  git2::Delta::Added => "Added".to_string(),
+                  git2::Delta::Deleted => "Deleted".to_string(),
+                  git2::Delta::Modified => "Modified".to_string(),
+                  git2::Delta::Renamed => "Renamed".to_string(),
+                  git2::Delta::Copied => "Copied".to_string(),
+                  git2::Delta::Ignored => "Ignored".to_string(),
+                  git2::Delta::Untracked => "Untracked".to_string(),
+                  git2::Delta::Typechange => "Type Changed".to_string(),
+                  git2::Delta::Unmodified => "Unmodified".to_string(),
+                  git2::Delta::Unreadable => "Unreadable".to_string(),
+                  git2::Delta::Conflicted => "Conflicted".to_string(),
+                },
+                file: file_path_str.to_string(),
+              };
+              changes.push(change);
+            }
+          }
+        }
+        true
+      },
+      None,
+      None,
+      None,
+    )
+    .map_err(|e| e.to_string())?;
+
+  // Create the detailed commit outside the borrow scope
+  let detailed_commit = DetailedCommit {
+    id: commit.id().to_string(),
+    message: commit.message().unwrap_or("").to_string(),
+    author: commit.author().name().unwrap_or("").to_string(),
+    date: commit.time().seconds(),
+    changes,
+  };
+
+  Ok(detailed_commit)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
     .invoke_handler(tauri::generate_handler![
       generate_docs,
       read_file,
-      file_exists
+      file_exists,
+      list_folders,
+      list_folder_commits,
+      get_commit_details
     ]) // Combined into single handler
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
