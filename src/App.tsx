@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router";
 import Layout from "@/layout";
 import Docs from "@/view/Docs"
 import Apps from "@/view/Apps"
+import GitHistory from "@/view/GitHistory"
 
 function App() {
   return (
@@ -9,7 +10,7 @@ function App() {
       <Routes>
         <Route path="/apps" element={<Apps />} />
         <Route path="/docs" element={<Docs />} />
-        {/* <Route path="/preview" element={<PreviewDocs />} /> */}
+        <Route path="/history" element={<GitHistory />} />
       </Routes>
     </Layout>
   );

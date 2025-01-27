@@ -1,4 +1,4 @@
-import { BookMarked, AppWindowMac } from "lucide-react"
+import { BookMarked, AppWindowMac, History } from "lucide-react"
 import { Link, useLocation } from "react-router"
 import {
   Sidebar,
@@ -22,6 +22,11 @@ const items = [
     title: "Docs",
     url: "/docs",
     icon: BookMarked
+  },
+  {
+    title: "History",
+    url: "/history",
+    icon: History
   },
 ]
 

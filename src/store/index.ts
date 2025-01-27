@@ -28,6 +28,11 @@ const useStore = create<StoreState>()(
 
         return `${monoRepoPath}/packages/libs`;
       },
+      getAppsPath: (monoRepoPath) => {
+        if (!monoRepoPath) return '';
+
+        return `${monoRepoPath}/packages/apps`;
+      },
       setCurrentGeneratedFolder: (folderName) => set({ currentGeneratedFolder: folderName }),
       setMonoRepoPath: (path) => set({ monoRepoPath: path }),
       resetMonoRepoPath: () => set({ monoRepoPath: '' }),
