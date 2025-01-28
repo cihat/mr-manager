@@ -10,7 +10,7 @@ import {
 import FolderList from "@/components/folder-list";
 import useGitHistoryStore from "@/store/gitHistory";
 import useAppStore from "@/store";
-import { Loader2, GitCommit as GitCommitIcon, FileIcon, Github, Timer, TimerIcon, History, LucideHistory, TimerReset } from "lucide-react";
+import { Loader2, GitCommit as GitCommitIcon, FileIcon, Github, TimerReset } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { DiffEditor } from '@monaco-editor/react';
@@ -59,7 +59,7 @@ interface DiffViewerProps {
 
 const DiffViewer: React.FC<DiffViewerProps> = ({ oldContent, newContent, language = "typescript" }) => {
   return (
-    <div className="h-[600px] w-full border rounded-md overflow-hidden">
+    <div className="h-full w-full border rounded-md overflow-hidden">
       <DiffEditor
         height="100%"
         width="100%"
@@ -132,7 +132,7 @@ const CommitDetails: React.FC<CommitDetailsProps> = ({ commit, repoPath }) => {
 
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 h-full">
       <div className="space-y-2 pb-4 border-b">
         <h3 className="font-medium text-lg">{commit.message}</h3>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -155,8 +155,8 @@ const CommitDetails: React.FC<CommitDetailsProps> = ({ commit, repoPath }) => {
         </div>
       </div>
 
-      <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-1 space-y-2 max-h-[800px] overflow-y-auto pr-2">
+      <div className="grid grid-cols-5 gap-4 h-[calc(100%-5rem)]">
+        <div className="col-span-1 space-y-2 overflow-y-auto pr-2">
           <h4 className="text-sm font-medium mb-3 sticky top-0 bg-background py-2">
             Changes ({commit.changes.length})
           </h4>
@@ -173,7 +173,7 @@ const CommitDetails: React.FC<CommitDetailsProps> = ({ commit, repoPath }) => {
                 {change.status}
               </Badge>
               <div className="flex items-center gap-2 text-sm">
-                <Timer className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+                <FileIcon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
                 <span className="truncate text-xs">{change.file}</span>
               </div>
             </div>
@@ -324,7 +324,7 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
         </Alert>
       )}
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-4 gap-4 h-[calc(100vh-8rem)]">
         <div className="border rounded-lg overflow-scroll max-h-[calc(100vh-136px)]">
           <FolderList
             folders={folders}
@@ -358,7 +358,7 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
       </div>
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-[90vw] max-h-[90vh] p-6">
+        <DialogContent className="max-w-[90vw] h-[90vh] p-6 block">
           <DialogHeader>
             <DialogTitle>Commit Details</DialogTitle>
           </DialogHeader>
@@ -367,10 +367,12 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
               <Loader2 className="w-6 h-6 animate-spin" />
             </div>
           ) : selectedCommit ? (
-            <CommitDetails
-              commit={selectedCommit}
-              repoPath={currentRepoPath} // Pass the repo path to CommitDetails
-            />
+            <div className="h-[calc(90vh-8rem)]">
+              <CommitDetails
+                commit={selectedCommit}
+                repoPath={currentRepoPath}
+              />
+            </div>
           ) : null}
         </DialogContent>
       </Dialog>
