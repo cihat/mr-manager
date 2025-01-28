@@ -13,6 +13,7 @@ import useStore from "@/store/gitHistory";
 import { Loader2, GitCommit as GitCommitIcon, FileIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { DiffEditor } from '@monaco-editor/react';
 
 interface BasicCommit {
   id: string;
@@ -32,6 +33,7 @@ interface DetailedCommit extends BasicCommit {
 
 interface CommitDetailsProps {
   commit: DetailedCommit
+  repoPath: string;
 }
 
 const getStatusColor = (status: string) => {
@@ -47,7 +49,65 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const CommitDetails: React.FC<CommitDetailsProps> = ({ commit }) => {
+interface DiffViewerProps {
+  oldContent: string;
+  newContent: string;
+  language?: string;
+}
+
+const DiffViewer: React.FC<DiffViewerProps> = ({ oldContent, newContent, language = "typescript" }) => {
+  console.log('oldContent, newContent >>', oldContent, newContent)
+
+  return (
+    <div className="h-[600px] w-full border rounded-md overflow-hidden">
+      <DiffEditor
+        height="100%"
+        width="100%"
+        language={language}
+        original={oldContent}
+        modified={newContent}
+        options={{
+          readOnly: true,
+          renderSideBySide: true,
+          minimap: { enabled: false },
+          scrollBeyondLastLine: false,
+          diffWordWrap: "off",
+          renderOverviewRuler: false,
+        }}
+        theme="vs-dark"
+      />
+    </div>
+  );
+};
+
+const CommitDetails: React.FC<CommitDetailsProps> = ({ commit, repoPath }) => {
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [diffContent, setDiffContent] = useState<{ old: string; new: string } | null>(null);
+  const [loadingDiff, setLoadingDiff] = useState(false);
+
+  const handleFileClick = async (file: string) => {
+    setLoadingDiff(true);
+    setSelectedFile(file);
+    try {
+      const [oldContent, newContent] = await invoke<[string, string]>('get_commit_diff', {
+        repoPath,  // Using the repoPath prop here
+        commitId: commit.id,
+        filePath: file,
+      });
+      setDiffContent({ old: oldContent, new: newContent });
+    } catch (error) {
+      console.error('Failed to load diff:', error);
+    } finally {
+      setLoadingDiff(false);
+    }
+  };
+
+  useEffect(() => {
+    if (commit.changes.length > 0 && !selectedFile) {
+      handleFileClick(commit.changes[0].file);
+    }
+  }, [commit]);
+
   return (
     <div className="space-y-4">
       <div className="space-y-2 pb-4 border-b">
@@ -61,19 +121,49 @@ const CommitDetails: React.FC<CommitDetailsProps> = ({ commit }) => {
           <span>{new Date(commit.date * 1000).toLocaleDateString()}</span>
         </div>
       </div>
-      <div className="space-y-2">
-        <h4 className="text-sm font-medium mb-3">Changes ({commit.changes.length})</h4>
-        {commit.changes.map((change, idx) => (
-          <div key={idx} className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-muted/50">
-            <Badge variant="outline" className={cn("font-medium", getStatusColor(change.status))}>
-              {change.status}
-            </Badge>
-            <div className="flex items-center gap-2 text-sm truncate">
-              <FileIcon className="w-4 h-4 text-muted-foreground" />
-              <span className="truncate">{change.file}</span>
+
+      <div className="grid grid-cols-5 gap-4">
+        <div className="col-span-1 space-y-2 max-h-[600px] overflow-y-auto pr-2">
+          <h4 className="text-sm font-medium mb-3 sticky top-0 bg-background py-2">
+            Changes ({commit.changes.length})
+          </h4>
+          {commit.changes.map((change, idx) => (
+            <div
+              key={idx}
+              className={cn(
+                "flex flex-col gap-2 px-2 py-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors",
+                selectedFile === change.file && "bg-muted"
+              )}
+              onClick={() => handleFileClick(change.file)}
+            >
+              <Badge variant="outline" className={cn("font-medium w-fit", getStatusColor(change.status))}>
+                {change.status}
+              </Badge>
+              <div className="flex items-center gap-2 text-sm">
+                <FileIcon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+                <span className="truncate text-xs">{change.file}</span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+
+        <div className="col-span-4">
+          {loadingDiff ? (
+            <div className="flex justify-center items-center h-[600px] border rounded-md">
+              <Loader2 className="w-6 h-6 animate-spin" />
+            </div>
+          ) : diffContent && selectedFile ? (
+            <DiffViewer
+              oldContent={diffContent.old}
+              newContent={diffContent.new}
+              language={selectedFile.endsWith('.ts') ? 'typescript' : 'javascript'}
+            />
+          ) : (
+            <div className="flex justify-center items-center h-[600px] text-muted-foreground border rounded-md">
+              Select a file to view changes
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -121,6 +211,7 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
   const [selectedCommit, setSelectedCommit] = useState<DetailedCommit | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [currentRepoPath, setCurrentRepoPath] = useState<string>(''); // Added to track current repo path
 
   const {
     monoRepoPath,
@@ -130,9 +221,6 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
     setCurrentView
   } = useStore();
 
-  useEffect(() => {
-    loadFolders();
-  }, [currentView, monoRepoPath]);
 
   const loadFolders = async () => {
     const basePath = currentView === "libs" ? getLibsPath(monoRepoPath) : getAppsPath(monoRepoPath);
@@ -152,13 +240,20 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
     }
   };
 
+  useEffect(() => {
+    loadFolders();
+  }, [currentView, monoRepoPath]);
+
   const handleFolderClick = async (folder: any) => {
     setLoading(true);
     setCommits([]);
     setSelectedFolder(folder.name);
+
+    const basePath = currentView === "libs" ? getLibsPath(monoRepoPath) : getAppsPath(monoRepoPath);
+    const fullPath = `${basePath}/${folder.name}`;
+    setCurrentRepoPath(fullPath); // Store the current repo path
+
     try {
-      const basePath = currentView === "libs" ? getLibsPath(monoRepoPath) : getAppsPath(monoRepoPath);
-      const fullPath = `${basePath}/${folder.name}`;
       const commits = await invoke<BasicCommit[]>('list_folder_commits', {
         path: fullPath,
         limit: 50
@@ -174,14 +269,10 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
   };
 
   const handleCommitClick = async (commit: BasicCommit) => {
-    if (!selectedFolder) return;
-
     setDetailsLoading(true);
     try {
-      const basePath = currentView === "libs" ? getLibsPath(monoRepoPath) : getAppsPath(monoRepoPath);
-      const fullPath = `${basePath}/${selectedFolder}`;
       const details = await invoke<DetailedCommit>('get_commit_details', {
-        repoPath: fullPath,
+        repoPath: currentRepoPath,
         commitId: commit.id,
       });
       setSelectedCommit(details);
@@ -244,7 +335,7 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
       </div>
 
       <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-[90vw] max-h-[90vh] p-6">
           <DialogHeader>
             <DialogTitle>Commit Details</DialogTitle>
           </DialogHeader>
@@ -253,7 +344,10 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
               <Loader2 className="w-6 h-6 animate-spin" />
             </div>
           ) : selectedCommit ? (
-            <CommitDetails commit={selectedCommit} />
+            <CommitDetails
+              commit={selectedCommit}
+              repoPath={currentRepoPath} // Pass the repo path to CommitDetails
+            />
           ) : null}
         </DialogContent>
       </Dialog>

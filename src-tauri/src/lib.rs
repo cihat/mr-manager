@@ -130,7 +130,10 @@ fn find_git_root(start_path: &Path) -> Option<PathBuf> {
 }
 
 #[tauri::command]
-fn list_folder_commits(path: String, limit: Option<usize>) -> Result<Vec<BasicCommit>, String> {
+async fn list_folder_commits(
+  path: String,
+  limit: Option<usize>,
+) -> Result<Vec<BasicCommit>, String> {
   let commit_limit = limit.unwrap_or(20);
   let path = Path::new(&path);
 
@@ -152,31 +155,95 @@ fn list_folder_commits(path: String, limit: Option<usize>) -> Result<Vec<BasicCo
   let mut commits = Vec::new();
   let mut diff_opts = DiffOptions::new();
   diff_opts.pathspec(&relative_path);
-  diff_opts.include_untracked(true);
 
-  // Batch işleme için commit'leri toplama
-  let batch_size = 100;
-  let mut batch = Vec::with_capacity(batch_size);
-
+  // Process commits in smaller chunks to avoid blocking
   for oid in revwalk {
-    let oid = oid.map_err(|e| e.to_string())?;
-    batch.push(oid);
+    if commits.len() >= commit_limit {
+      break;
+    }
 
-    if batch.len() >= batch_size {
-      process_commit_batch(&repo, &mut batch, &mut commits, commit_limit)?;
-      if commits.len() >= commit_limit {
-        break;
-      }
-      batch.clear();
+    let oid = oid.map_err(|e| e.to_string())?;
+    let commit = repo.find_commit(oid).map_err(|e| e.to_string())?;
+
+    // Check if this commit modified the target path
+    let parent = commit.parent(0).ok();
+    let parent_tree = parent.as_ref().and_then(|p| p.tree().ok());
+    let commit_tree = commit.tree().map_err(|e| e.to_string())?;
+
+    let diff = repo
+      .diff_tree_to_tree(
+        parent_tree.as_ref(),
+        Some(&commit_tree),
+        Some(&mut diff_opts),
+      )
+      .map_err(|e| e.to_string())?;
+
+    // Only include commit if it modified files in our path
+    if diff.deltas().len() > 0 {
+      commits.push(BasicCommit {
+        id: commit.id().to_string(),
+        message: commit.message().unwrap_or("").to_string(),
+        author: commit.author().name().unwrap_or("").to_string(),
+        date: commit.time().seconds(),
+      });
     }
   }
 
-  // Kalan commit'leri işle
-  if !batch.is_empty() {
-    process_commit_batch(&repo, &mut batch, &mut commits, commit_limit)?;
-  }
+  Ok(commits)
+}
 
-  Ok(commits.into_iter().take(commit_limit).collect())
+#[tauri::command]
+async fn get_commit_diff(
+  repo_path: String,
+  commit_id: String,
+  file_path: String,
+) -> Result<(String, String), String> {
+  let path = Path::new(&repo_path);
+  let git_root = find_git_root(path).ok_or_else(|| "Could not find Git repository".to_string())?;
+  let repo =
+    Repository::open(&git_root).map_err(|e| format!("Failed to open repository: {}", e))?;
+
+  let oid = Oid::from_str(&commit_id).map_err(|e| format!("Invalid commit ID: {}", e))?;
+  let commit = repo
+    .find_commit(oid)
+    .map_err(|e| format!("Failed to find commit: {}", e))?;
+
+  // Get the commit tree
+  let tree = commit.tree().map_err(|e| e.to_string())?;
+
+  // Get parent commit's tree or empty for first commit
+  let parent_tree = commit
+    .parent(0)
+    .and_then(|parent| parent.tree())
+    .unwrap_or(tree.clone());
+
+  // Find the file in both trees
+  let old_blob = parent_tree
+    .get_path(Path::new(&file_path))
+    .ok()
+    .and_then(|entry| entry.to_object(&repo).ok())
+    .and_then(|obj| {
+      obj
+        .as_blob()
+        .map(|blob| String::from_utf8_lossy(blob.content()).into_owned())
+    });
+
+  let new_blob = tree
+    .get_path(Path::new(&file_path))
+    .ok()
+    .and_then(|entry| entry.to_object(&repo).ok())
+    .and_then(|obj| {
+      obj
+        .as_blob()
+        .map(|blob| String::from_utf8_lossy(blob.content()).into_owned())
+    });
+
+  match (old_blob, new_blob) {
+    (Some(old_content), Some(new_content)) => Ok((old_content, new_content)),
+    (None, Some(new_content)) => Ok(("".to_string(), new_content)),
+    (Some(old_content), None) => Ok((old_content, "".to_string())),
+    (None, None) => Err("File not found in commit".to_string()),
+  }
 }
 
 fn process_commit_batch(
@@ -329,7 +396,8 @@ pub fn run() {
       file_exists,
       list_folders,
       list_folder_commits,
-      get_commit_details
+      get_commit_details,
+      get_commit_diff
     ]) // Combined into single handler
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
