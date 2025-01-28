@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Dialog,
@@ -9,17 +8,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import FolderList from "@/components/folder-list";
-import useStore from "@/store/gitHistory";
-import { Loader2, GitCommit as GitCommitIcon, FileIcon } from "lucide-react";
+import useGitHistoryStore from "@/store/gitHistory";
+import useAppStore from "@/store";
+import { Loader2, GitCommit as GitCommitIcon, FileIcon, Github, Timer, TimerIcon, History, LucideHistory, TimerReset } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { DiffEditor } from '@monaco-editor/react';
+import { getCommitUrl } from '@/utils/git';
 
 interface BasicCommit {
   id: string;
   message: string;
   author: string;
   date: number;
+  remote_url: string;
 }
 
 interface GitChange {
@@ -56,8 +58,6 @@ interface DiffViewerProps {
 }
 
 const DiffViewer: React.FC<DiffViewerProps> = ({ oldContent, newContent, language = "typescript" }) => {
-  console.log('oldContent, newContent >>', oldContent, newContent)
-
   return (
     <div className="h-[600px] w-full border rounded-md overflow-hidden">
       <DiffEditor
@@ -85,12 +85,40 @@ const CommitDetails: React.FC<CommitDetailsProps> = ({ commit, repoPath }) => {
   const [diffContent, setDiffContent] = useState<{ old: string; new: string } | null>(null);
   const [loadingDiff, setLoadingDiff] = useState(false);
 
+  const getFileLanguage = (filename: string) => {
+    const extension = filename.split('.').pop()?.toLowerCase();
+    switch (extension) {
+      case 'ts':
+      case 'tsx':
+        return 'typescript';
+      case 'js':
+      case 'jsx':
+        return 'javascript';
+      case 'json':
+        return 'json';
+      case 'md':
+        return 'markdown';
+      case 'html':
+        return 'html';
+      case 'css':
+        return 'css';
+      case 'scss':
+        return 'scss';
+      case 'php':
+        return 'php';
+      case 'rs':
+        return 'rust';
+      default:
+        return 'plaintext';
+    }
+  };
+
   const handleFileClick = async (file: string) => {
     setLoadingDiff(true);
     setSelectedFile(file);
     try {
       const [oldContent, newContent] = await invoke<[string, string]>('get_commit_diff', {
-        repoPath,  // Using the repoPath prop here
+        repoPath,
         commitId: commit.id,
         filePath: file,
       });
@@ -102,11 +130,6 @@ const CommitDetails: React.FC<CommitDetailsProps> = ({ commit, repoPath }) => {
     }
   };
 
-  useEffect(() => {
-    if (commit.changes.length > 0 && !selectedFile) {
-      handleFileClick(commit.changes[0].file);
-    }
-  }, [commit]);
 
   return (
     <div className="space-y-4">
@@ -119,11 +142,21 @@ const CommitDetails: React.FC<CommitDetailsProps> = ({ commit, repoPath }) => {
           <span>{commit.author}</span>
           <span>•</span>
           <span>{new Date(commit.date * 1000).toLocaleDateString()}</span>
+          <a
+            className='flex items-center gap-1 text-sm text-muted-foreground ml-auto'
+            href={getCommitUrl(commit.remote_url, commit.id)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {/* <ExternalLink className="w-4 h-4" /> */}
+            <Github className="w-4 h-4" />
+            <span>Open in GitHub</span>
+          </a>
         </div>
       </div>
 
       <div className="grid grid-cols-5 gap-4">
-        <div className="col-span-1 space-y-2 max-h-[600px] overflow-y-auto pr-2">
+        <div className="col-span-1 space-y-2 max-h-[800px] overflow-y-auto pr-2">
           <h4 className="text-sm font-medium mb-3 sticky top-0 bg-background py-2">
             Changes ({commit.changes.length})
           </h4>
@@ -140,7 +173,7 @@ const CommitDetails: React.FC<CommitDetailsProps> = ({ commit, repoPath }) => {
                 {change.status}
               </Badge>
               <div className="flex items-center gap-2 text-sm">
-                <FileIcon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+                <Timer className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
                 <span className="truncate text-xs">{change.file}</span>
               </div>
             </div>
@@ -149,17 +182,17 @@ const CommitDetails: React.FC<CommitDetailsProps> = ({ commit, repoPath }) => {
 
         <div className="col-span-4">
           {loadingDiff ? (
-            <div className="flex justify-center items-center h-[600px] border rounded-md">
+            <div className="flex justify-center items-center h-[800px] border rounded-md">
               <Loader2 className="w-6 h-6 animate-spin" />
             </div>
           ) : diffContent && selectedFile ? (
             <DiffViewer
               oldContent={diffContent.old}
               newContent={diffContent.new}
-              language={selectedFile.endsWith('.ts') ? 'typescript' : 'javascript'}
+              language={getFileLanguage(selectedFile)}
             />
           ) : (
-            <div className="flex justify-center items-center h-[600px] text-muted-foreground border rounded-md">
+            <div className="flex justify-center items-center h-[800px] text-muted-foreground border rounded-md">
               Select a file to view changes
             </div>
           )}
@@ -215,12 +248,10 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
 
   const {
     monoRepoPath,
-    currentView,
     getLibsPath,
     getAppsPath,
-    setCurrentView
-  } = useStore();
-
+  } = useGitHistoryStore();
+  const { currentView } = useAppStore();
 
   const loadFolders = async () => {
     const basePath = currentView === "libs" ? getLibsPath(monoRepoPath) : getAppsPath(monoRepoPath);
@@ -287,15 +318,6 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
 
   return (
     <div className={cn("p-4 space-y-4", className)}>
-      <ToggleGroup
-        type="single"
-        value={currentView}
-        onValueChange={(value: 'libs' | 'apps') => value && setCurrentView(value)}
-      >
-        <ToggleGroupItem value="libs" className="w-24">Libs</ToggleGroupItem>
-        <ToggleGroupItem value="apps" className="w-24">Apps</ToggleGroupItem>
-      </ToggleGroup>
-
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
@@ -307,6 +329,7 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
           <FolderList
             folders={folders}
             onClick={handleFolderClick}
+            icon={TimerReset}
           />
         </div>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { DirEntry, readDir } from "@tauri-apps/plugin-fs";
-import { Library } from "lucide-react";
+import { FileText, Library } from "lucide-react";
 import useStore from '../store';
 import { invoke } from '@tauri-apps/api/core';
 import { useToast } from '@/hooks/use-toast';
@@ -17,10 +17,12 @@ const TypeDocGeneration = ({ children }: FolderContainerProps) => {
   const {
     monoRepoPath,
     selectedFolder,
+    currentView,
     getLibsPath,
     setError,
     setSelectedFolder,
-    setCurrentGeneratedFolder
+    setCurrentGeneratedFolder,
+    getAppsPath
   } = useStore();
 
   const { toast } = useToast();
@@ -28,13 +30,16 @@ const TypeDocGeneration = ({ children }: FolderContainerProps) => {
   useEffect(() => {
     const loadFolders = async () => {
       if (!monoRepoPath) return;
+      console.log('monoRepoPath >>', monoRepoPath)
+      
 
-      const libsPath = getLibsPath(monoRepoPath);
+      // const libsPath = getLibsPath(monoRepoPath);
+      const basePath = currentView === "libs" ? getLibsPath(monoRepoPath) : getAppsPath(monoRepoPath);
       try {
-        const entries = await readDir(libsPath);
+        const entries = await readDir(basePath);
         const tsProjectNames = new Set();
         for (const folder of entries) {
-          const libPath = `${libsPath}/${folder.name}`;
+          const libPath = `${basePath}/${folder.name}`;
           try {
             const files = await readDir(libPath);
             if (files.some(f => f.name === 'tsconfig.json')) {
@@ -51,7 +56,7 @@ const TypeDocGeneration = ({ children }: FolderContainerProps) => {
       }
     };
     loadFolders();
-  }, [monoRepoPath]);
+  }, [monoRepoPath, currentView]);
 
   const generateDocsForFolder = async (folder: any) => {
     try {
@@ -88,7 +93,7 @@ const TypeDocGeneration = ({ children }: FolderContainerProps) => {
     <div className="max-h-[calc(100vh-64px)] cursor-pointer overflow-scroll min-w-[330px] bg-gray-50">
       <div className="flex items-center pl-3 pt-2 pb-0 bg-background">
         <Library className='w-8 h-8' />
-        <h3 className='font-semibold text-2xl'>Libs</h3>
+        <h3 className='font-semibold text-2xl'>Docs</h3>
       </div>
 
       <FolderList
@@ -101,6 +106,7 @@ const TypeDocGeneration = ({ children }: FolderContainerProps) => {
             generateDocsForFolder(folder);
           }
         }}
+        icon={FileText}
       >
         {children}
       </FolderList>

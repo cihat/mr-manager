@@ -1,4 +1,4 @@
-import { BookMarked, AppWindowMac, History } from "lucide-react"
+import { BookMarked, AppWindowMac, History, Command } from "lucide-react"
 import { Link, useLocation } from "react-router"
 import {
   Sidebar,
@@ -13,9 +13,9 @@ import {
 
 const items = [
   {
-    title: "Apps",
-    url: "/apps",
-    icon: AppWindowMac,
+    title: "Bash",
+    url: "/bash",
+    icon: Command,
     isComingSoon: true
   },
   {
