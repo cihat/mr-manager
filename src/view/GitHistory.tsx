@@ -145,7 +145,7 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
         isSelected: false
       })));
       setError('');
-    } catch (error) {
+    } catch (error: Error | any) {
       console.error('Failed to load folders:', error);
       setError(`Failed to load folders: ${error.message || error}`);
       setFolders([]);
@@ -165,7 +165,7 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
       });
       setCommits(commits);
       setError('');
-    } catch (error) {
+    } catch (error: Error | any) {
       console.error('Failed to load commits:', error);
       setError(`Failed to load commits: ${error.message || error}`);
     } finally {
@@ -186,7 +186,7 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
       });
       setSelectedCommit(details);
       setIsDetailsOpen(true);
-    } catch (error) {
+    } catch (error: Error | any) {
       console.error('Failed to load commit details:', error);
       setError(`Failed to load commit details: ${error.message || error}`);
     } finally {
