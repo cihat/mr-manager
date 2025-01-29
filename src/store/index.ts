@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+export interface Folder {
+  name: string;
+  isTypeScript: boolean;
+  isLoading: boolean;
+  isSelected: boolean;
+}
+
 interface StoreState {
   monoRepoPath: string;
   selectedFolder: string | null;
@@ -8,6 +15,7 @@ interface StoreState {
   currentView: 'libs' | 'apps';
   searchQuery: string;
   currentGeneratedFolder: string;
+  folders: Folder[];
 }
 
 interface StoreActions {
@@ -20,6 +28,7 @@ interface StoreActions {
   setMonoRepoPath: (path: string) => void;
   resetMonoRepoPath: () => void;
   setSelectedFolder: (folder: string) => void;
+  setFolders: (folders: Folder[]) => void;
 }
 
 const initialState: StoreState = {
@@ -29,11 +38,12 @@ const initialState: StoreState = {
   currentView: 'libs',
   searchQuery: '',
   currentGeneratedFolder: '',
+  folders: [],
 };
 
 const useStore = create<StoreState & StoreActions>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       ...initialState,
 
       getLibsPath: (monoRepoPath) => {
@@ -43,6 +53,9 @@ const useStore = create<StoreState & StoreActions>()(
       getAppsPath: (monoRepoPath) => {
         if (!monoRepoPath) return '';
         return `${monoRepoPath}/packages/apps`;
+      },
+      setFolders(folders) {
+        set({ folders });
       },
       setCurrentGeneratedFolder: (folderName) =>
         set({ currentGeneratedFolder: folderName }),

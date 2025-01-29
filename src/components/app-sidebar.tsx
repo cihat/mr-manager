@@ -1,4 +1,4 @@
-import { BookMarked, AppWindowMac, History, Command } from "lucide-react"
+import { BookMarked,  History, Command } from "lucide-react"
 import { Link, useLocation } from "react-router"
 import {
   Sidebar,

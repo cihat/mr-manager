@@ -1,7 +1,7 @@
 import { useState, useEffect, ReactNode } from 'react';
-import { DirEntry, readDir } from "@tauri-apps/plugin-fs";
+import { readDir } from "@tauri-apps/plugin-fs";
 import { FileText, Library } from "lucide-react";
-import useStore from '../store';
+import useStore, { Folder } from '../store';
 import { invoke } from '@tauri-apps/api/core';
 import { useToast } from '@/hooks/use-toast';
 import FolderList from './folder-list';
@@ -11,7 +11,6 @@ interface FolderContainerProps {
 }
 
 const TypeDocGeneration = ({ children }: FolderContainerProps) => {
-  const [folders, setFolders] = useState<DirEntry[]>([]);
   const [tsProjects, setTsProjects] = useState(new Set());
   const [loadingFolder, setLoadingFolder] = useState('');
   const {
@@ -22,7 +21,9 @@ const TypeDocGeneration = ({ children }: FolderContainerProps) => {
     setError,
     setSelectedFolder,
     setCurrentGeneratedFolder,
-    getAppsPath
+    getAppsPath,
+    folders,
+    setFolders
   } = useStore();
 
   const { toast } = useToast();
@@ -31,12 +32,12 @@ const TypeDocGeneration = ({ children }: FolderContainerProps) => {
     const loadFolders = async () => {
       if (!monoRepoPath) return;
       console.log('monoRepoPath >>', monoRepoPath)
-      
+
 
       // const libsPath = getLibsPath(monoRepoPath);
       const basePath = currentView === "libs" ? getLibsPath(monoRepoPath) : getAppsPath(monoRepoPath);
       try {
-        const entries = await readDir(basePath);
+        const entries = await readDir(basePath) as any[];
         const tsProjectNames = new Set();
         for (const folder of entries) {
           const libPath = `${basePath}/${folder.name}`;
@@ -55,6 +56,7 @@ const TypeDocGeneration = ({ children }: FolderContainerProps) => {
         console.error('Failed to read directory:', err);
       }
     };
+
     loadFolders();
   }, [monoRepoPath, currentView]);
 

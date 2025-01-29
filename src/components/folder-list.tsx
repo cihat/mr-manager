@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Folder, FileText, Type, Loader2, LucideIcon } from "lucide-react";
+import { Folder, Type, Loader2, LucideIcon } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import useStore from '@/store';

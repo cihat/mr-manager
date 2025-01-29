@@ -239,7 +239,6 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
   const [loading, setLoading] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [error, setError] = useState('');
-  const [folders, setFolders] = useState<Array<any>>([]);
   const [commits, setCommits] = useState<BasicCommit[]>([]);
   const [selectedCommit, setSelectedCommit] = useState<DetailedCommit | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
@@ -251,7 +250,7 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
     getLibsPath,
     getAppsPath,
   } = useGitHistoryStore();
-  const { currentView } = useAppStore();
+  const { currentView, folders, setFolders } = useAppStore();
 
   const loadFolders = async () => {
     const basePath = currentView === "libs" ? getLibsPath(monoRepoPath) : getAppsPath(monoRepoPath);
