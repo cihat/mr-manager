@@ -242,13 +242,14 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
   const [commits, setCommits] = useState<BasicCommit[]>([]);
   const [selectedCommit, setSelectedCommit] = useState<DetailedCommit | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [currentRepoPath, setCurrentRepoPath] = useState<string>(''); // Added to track current repo path
 
   const {
     monoRepoPath,
+    selectedFolder,
     getLibsPath,
     getAppsPath,
+    setSelectedFolder
   } = useGitHistoryStore();
   const { currentView, folders, setFolders } = useAppStore();
 

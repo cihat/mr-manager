@@ -1,10 +1,7 @@
-use git2::{DiffOptions, Oid, Repository, Sort};
+mod git;
+use git2::{DiffOptions, Oid, Repository};
 use serde::Serialize;
-use std::{
-  collections::HashMap,
-  path::{Path, PathBuf},
-  time::{Duration, SystemTime},
-};
+use std::path::{Path, PathBuf};
 
 #[tauri::command]
 async fn generate_docs(path: String) -> Result<String, String> {
@@ -93,7 +90,6 @@ fn list_folders(path: String) -> Result<Vec<String>, String> {
   Ok(entries)
 }
 
-#[derive(Serialize)]
 struct BasicCommit {
   id: String,
   message: String,
@@ -133,63 +129,8 @@ fn find_git_root(start_path: &Path) -> Option<PathBuf> {
 async fn list_folder_commits(
   path: String,
   limit: Option<usize>,
-) -> Result<Vec<BasicCommit>, String> {
-  let commit_limit = limit.unwrap_or(20);
-  let path = Path::new(&path);
-
-  let git_root = find_git_root(path).ok_or_else(|| "Could not find Git repository".to_string())?;
-  let repo =
-    Repository::open(&git_root).map_err(|e| format!("Failed to open repository: {}", e))?;
-
-  let relative_path = path
-    .strip_prefix(&git_root)
-    .map_err(|_| "Failed to get relative path".to_string())?
-    .to_str()
-    .ok_or_else(|| "Invalid path".to_string())?
-    .to_string();
-
-  let mut revwalk = repo.revwalk().map_err(|e| e.to_string())?;
-  revwalk.set_sorting(Sort::TIME).map_err(|e| e.to_string())?;
-  revwalk.push_head().map_err(|e| e.to_string())?;
-
-  let mut commits = Vec::new();
-  let mut diff_opts = DiffOptions::new();
-  diff_opts.pathspec(&relative_path);
-
-  // Process commits in smaller chunks to avoid blocking
-  for oid in revwalk {
-    if commits.len() >= commit_limit {
-      break;
-    }
-
-    let oid = oid.map_err(|e| e.to_string())?;
-    let commit = repo.find_commit(oid).map_err(|e| e.to_string())?;
-
-    // Check if this commit modified the target path
-    let parent = commit.parent(0).ok();
-    let parent_tree = parent.as_ref().and_then(|p| p.tree().ok());
-    let commit_tree = commit.tree().map_err(|e| e.to_string())?;
-
-    let diff = repo
-      .diff_tree_to_tree(
-        parent_tree.as_ref(),
-        Some(&commit_tree),
-        Some(&mut diff_opts),
-      )
-      .map_err(|e| e.to_string())?;
-
-    // Only include commit if it modified files in our path
-    if diff.deltas().len() > 0 {
-      commits.push(BasicCommit {
-        id: commit.id().to_string(),
-        message: commit.message().unwrap_or("").to_string(),
-        author: commit.author().name().unwrap_or("").to_string(),
-        date: commit.time().seconds(),
-      });
-    }
-  }
-
-  Ok(commits)
+) -> Result<Vec<git::BasicCommit>, String> {
+  git::list_folder_commits(path, limit).await
 }
 
 #[tauri::command]
@@ -246,64 +187,6 @@ async fn get_commit_diff(
   }
 }
 
-fn process_commit_batch(
-  repo: &Repository,
-  batch: &mut Vec<Oid>,
-  commits: &mut Vec<BasicCommit>,
-  limit: usize,
-) -> Result<(), String> {
-  for &oid in batch.iter() {
-    if commits.len() >= limit {
-      break;
-    }
-
-    let commit = repo.find_commit(oid).map_err(|e| e.to_string())?;
-
-    // Hızlı kontrol: Commit mesajında path geçiyor mu?
-    let message = commit.message().unwrap_or("");
-    let commit_data = BasicCommit {
-      id: commit.id().to_string(),
-      message: message.to_string(),
-      author: commit.author().name().unwrap_or("").to_string(),
-      date: commit.time().seconds(),
-    };
-
-    commits.push(commit_data);
-  }
-  Ok(())
-}
-
-// Cache yapısı için yeni bir struct
-
-#[derive(Default)]
-struct CommitCache {
-  cached_commits: HashMap<String, Vec<BasicCommit>>,
-  last_update: HashMap<String, SystemTime>,
-  cache_duration: Duration,
-}
-impl CommitCache {
-  fn new() -> Self {
-    Self {
-      cached_commits: HashMap::new(),
-      last_update: HashMap::new(),
-      cache_duration: Duration::from_secs(300), // 5 dakika
-    }
-  }
-
-  fn get(&self, path: &str) -> Option<&Vec<BasicCommit>> {
-    if let Some(last_update) = self.last_update.get(path) {
-      if last_update.elapsed().unwrap_or_default() < self.cache_duration {
-        return self.cached_commits.get(path);
-      }
-    }
-    None
-  }
-
-  fn set(&mut self, path: String, commits: Vec<BasicCommit>) {
-    self.cached_commits.insert(path.clone(), commits);
-    self.last_update.insert(path, SystemTime::now());
-  }
-}
 #[tauri::command]
 fn get_commit_details(repo_path: String, commit_id: String) -> Result<DetailedCommit, String> {
   let path = Path::new(&repo_path);
