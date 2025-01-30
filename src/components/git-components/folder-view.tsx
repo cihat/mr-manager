@@ -7,7 +7,7 @@ export const FolderView: React.FC<{
   loading: boolean;
   onFolderClick: (folder: Folder) => void;
 }> = ({ folders, loading, onFolderClick }) => (
-  <div className="border rounded-lg overflow-scroll max-h-[calc(100vh-136px)]">
+  <div className="border-l overflow-scroll max-h-[calc(100vh-136px)]">
     <FolderList
       folders={folders}
       onClick={onFolderClick}

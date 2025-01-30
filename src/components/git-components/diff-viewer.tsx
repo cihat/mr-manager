@@ -8,7 +8,7 @@ interface DiffViewerProps {
 
 const DiffViewer: React.FC<DiffViewerProps> = ({ oldContent, newContent, language = "typescript" }) => {
   return (
-    <div className="h-full w-full border rounded-md overflow-hidden">
+    <div className="h-full w-full overflow-hidden">
       <DiffEditor
         height="100%"
         width="100%"

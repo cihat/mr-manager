@@ -87,7 +87,7 @@ const FolderList: React.FC<FolderListProps> = ({
             {folder.isLoading ? (
               <Loader2 className="w-6 h-6 text-primary animate-spin" />
             ) : (
-              <Icon // Dinamik icon'u burada kullanıyoruz
+              <Icon
                 className="text-primary min-w-[24px] min-h-[24px] bg-accent p-1 box-content rounded-lg hover:bg-accent/80 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();

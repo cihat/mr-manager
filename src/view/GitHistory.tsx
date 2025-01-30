@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import FolderList from "@/components/folder-list";
 import useGitHistoryStore from "@/store/gitHistory";
 import useAppStore from "@/store";
-import { Loader2, GitCommit as GitCommitIcon, TimerReset } from "lucide-react";
+import { Loader2, GitCommit as GitCommitIcon, TimerReset, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CommitDetails from '@/components/git-components/commit-details';
 import { BasicCommit, DetailedCommit } from '@/types';
@@ -33,7 +33,7 @@ const CommitListSection: React.FC<{
   onCommitClick: (commit: BasicCommit) => void;
 }> = ({ loading, commits, selectedFolder, onCommitClick }) => {
   if (loading) return <LoadingSpinner message="Loading commits..." />;
-  
+
   return commits.length > 0 ? (
     <CommitList commits={commits} onCommitClick={onCommitClick} />
   ) : (
@@ -48,7 +48,7 @@ const FolderListSection: React.FC<{
   folders: any[];
   onFolderClick: (folder: any) => void;
 }> = ({ folders, onFolderClick }) => (
-  <div className="border rounded-lg overflow-scroll max-h-[calc(100vh-136px)]">
+  <div className="overflow-scroll max-h-[calc(100vh-136px)]">
     <FolderList folders={folders} onClick={onFolderClick} icon={TimerReset} />
   </div>
 );
@@ -162,6 +162,14 @@ const useGitHistory = () => {
   };
 };
 
+const Header = () => (
+  <div className="flex items-center pl-3 pt-2 pb-0 bg-background">
+    <History className="w-8 h-8" />
+    <h3 className="font-semibold text-2xl">History</h3>
+  </div>
+);
+
+
 const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
   const {
     loading,
@@ -179,13 +187,15 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
   } = useGitHistory();
 
   return (
-    <div className={cn("p-4 space-y-4", className)}>
+    <div className={cn("", className)}>
       {error && <ErrorAlert message={error} />}
 
-      <div className="grid grid-cols-4 gap-4 h-[calc(100vh-8rem)]">
+      <Header />
+
+      <div className="grid grid-cols-4 h-[calc(100vh-8rem)]">
         <FolderListSection folders={folders} onFolderClick={handleFolderClick} />
 
-        <div className="border rounded-lg p-4 col-span-3 overflow-scroll max-h-[calc(100vh-136px)]">
+        <div className="p-4 col-span-3 overflow-scroll max-h-[calc(100vh-136px)]">
           <CommitListSection
             loading={loading}
             commits={commits}

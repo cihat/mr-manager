@@ -79,7 +79,7 @@ const CommitDetails: React.FC<CommitDetailsProps> = ({ commit, repoPath }) => {
 
   return (
     <div className="space-y-4 h-full">
-      <div className="space-y-2 pb-4 border-b">
+      <div className="space-y-2 pb-4">
         <h3 className="font-medium text-lg">{commit.message}</h3>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <GitCommitIcon className="w-4 h-4" />
@@ -128,7 +128,7 @@ const CommitDetails: React.FC<CommitDetailsProps> = ({ commit, repoPath }) => {
 
         <div className="col-span-4">
           {loadingDiff ? (
-            <div className="flex justify-center items-center h-[800px] border rounded-md">
+            <div className="flex justify-center items-center h-[800px]">
               <Loader2 className="w-6 h-6 animate-spin" />
             </div>
           ) : diffContent && selectedFile ? (
@@ -138,7 +138,7 @@ const CommitDetails: React.FC<CommitDetailsProps> = ({ commit, repoPath }) => {
               language={getFileLanguage(selectedFile)}
             />
           ) : (
-            <div className="flex justify-center items-center h-[800px] text-muted-foreground border rounded-md">
+            <div className="flex justify-center items-center h-[800px] text-muted-foreground">
               Select a file to view changes
             </div>
           )}
