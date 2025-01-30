@@ -1,7 +1,7 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { readDir } from "@tauri-apps/plugin-fs";
 import { FileText, Library } from "lucide-react";
-import useStore, { Folder } from '../store';
+import useStore from '../store';
 import { invoke } from '@tauri-apps/api/core';
 import { useToast } from '@/hooks/use-toast';
 import FolderList from './folder-list';
