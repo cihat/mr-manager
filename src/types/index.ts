@@ -47,3 +47,16 @@ export interface GitHistoryStore {
   resetMonoRepoPath: () => void;
   setSelectedFolder: (folder: string | null) => void;
 }
+
+
+export interface BasicCommit {
+  id: string;
+  message: string;
+  author: string;
+  date: number;
+  remote_url: string;
+}
+
+export interface DetailedCommit extends BasicCommit {
+  changes: GitChange[];
+}
