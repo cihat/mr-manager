@@ -1,3 +1,4 @@
+//@ts-nocheck
 import React, { useState } from 'react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import FolderList from "@/components/folder-list";
@@ -15,10 +16,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 const BranchSelect = ({ branches, onValueChange }) => {
   const [filter, setFilter] = useState('');
-  const filteredBranches = Array.isArray(branches) 
+  const filteredBranches = Array.isArray(branches)
     ? branches
-        .filter(branch => branch.toLowerCase().includes(filter.toLowerCase()))
-        .slice(0, 100)
+      .filter(branch => branch.toLowerCase().includes(filter.toLowerCase()))
+      .slice(0, 100)
     : [];
 
   return (
@@ -47,7 +48,7 @@ const BranchSelect = ({ branches, onValueChange }) => {
 
 const RemoteSelect = ({ remotes, onValueChange }) => {
   const remotesList = Array.isArray(remotes) ? remotes : [];
-  
+
   return (
     <Select defaultValue="upstream" onValueChange={onValueChange}>
       <SelectTrigger className="w-[120px]">
@@ -65,9 +66,9 @@ const RemoteSelect = ({ remotes, onValueChange }) => {
 const CommitSearchInput = ({ value, onChange }) => (
   <Tooltip>
     <TooltipTrigger>
-      <Input 
-        placeholder='Search author, message, id' 
-        value={value} 
+      <Input
+        placeholder='Search author, message, id'
+        value={value}
         onChange={onChange}
       />
     </TooltipTrigger>
@@ -149,7 +150,7 @@ const GitHistory = ({ className }) => {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      
+
       <SubHeader title='History' icon='history'>
         <div className='ml-auto mr-5 flex gap-2'>
           <BranchSelect branches={branches} onValueChange={setBranch} />

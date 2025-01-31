@@ -1,16 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import useStore from '@/store';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
-import { homeDir } from '@tauri-apps/api/path';
-import { join } from '@tauri-apps/api/path';
-import { Loader2, Folder, FileWarning } from "lucide-react";
+import { homeDir, join } from '@tauri-apps/api/path';
+import { Loader2, Folder, FileWarning, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const PreviewDocs = () => {
   const [loading, setLoading] = useState(false);
   const { error, setError, selectedFolder, currentGeneratedFolder } = useStore();
   const [assetUrl, setAssetUrl] = useState('');
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const handleFolderSelect = async () => {
     setLoading(true);
@@ -20,7 +21,6 @@ const PreviewDocs = () => {
       const folderPath = await join(homeDirPath, 'mr-manager', selectedFolder || '');
       const assetUrl = convertFileSrc(folderPath);
       const isExist = await invoke('file_exists', { path: `${folderPath}/index.html` });
-
       if (!isExist) {
         setError('Please generate documentation first.');
       }
@@ -30,6 +30,20 @@ const PreviewDocs = () => {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleBackClick = () => {
+    if (iframeRef.current) {
+      console.log('iframeRef.current.window>>', iframeRef.current.contentWindow?.top?.history)
+
+      try {
+        if (iframeRef.current.contentWindow) {
+          iframeRef.current.contentWindow.top?.history.back();
+        }
+      } catch (error) {
+        console.error('Error navigating back:', error);
+      }
     }
   };
 
@@ -68,19 +82,29 @@ const PreviewDocs = () => {
             </AlertDescription>
           </div>
         </Card>
-      )
-        : (
-          <div className="w-full h-full min-h-96 relative bg-white rounded-lg overflow-hidden">
-            <iframe
-              src={`${assetUrl}/index.html`}
-              className="w-full h-full border-0"
-              sandbox="allow-scripts allow-same-origin"
-              title="HTML Preview"
-            />
+      ) : (
+        <div className="w-full h-full min-h-96 flex flex-col bg-white rounded-lg overflow-hidden relative">
+          <div className="absolute top-2 left-2 z-10">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBackClick}
+              className=""
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
           </div>
-        )
-      }
-    </Card >
+          <iframe
+            ref={iframeRef}
+            src={`${assetUrl}/index.html`}
+            className="w-full h-full border-0"
+            sandbox="allow-scripts allow-same-origin"
+            title="HTML Preview"
+          />
+        </div>
+      )}
+    </Card>
   );
 };
 

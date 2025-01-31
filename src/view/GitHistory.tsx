@@ -1,3 +1,5 @@
+//@ts-nocheck
+
 import React, { useState } from 'react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import FolderList from "@/components/folder-list";
@@ -15,58 +17,58 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 import Fuse from 'fuse.js';
 
-const BranchSelect = ({ branches = [], onValueChange: any  }) => {
-  const [filter, setFilter] = useState('');
+// const BranchSelect = ({ branches = [], onValueChange: any  }) => {
+//   const [filter, setFilter] = useState('');
 
-  const fuse = new Fuse(branches, {
-    threshold: 0.3,
-    distance: 100
-  });
+//   const fuse = new Fuse(branches, {
+//     threshold: 0.3,
+//     distance: 100
+//   });
 
-  const filteredBranches = filter
-    ? fuse.search(filter).map(result => result.item)
-    : branches;
+//   const filteredBranches = filter
+//     ? fuse.search(filter).map(result => result.item)
+//     : branches;
 
-  const displayBranches = filteredBranches.slice(0, 100);
+//   const displayBranches = filteredBranches.slice(0, 100);
 
-  return (
-    <Select defaultValue="master" onValueChange={onValueChange}>
-      <SelectTrigger className="w-[120px]">
-        <SelectValue placeholder="Branch" />
-      </SelectTrigger>
-      <SelectContent>
-        <div className="p-2">
-          <Input
-            placeholder="Filter branches..."
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className="mb-2"
-          />
-        </div>
-        <div className="max-h-[300px] overflow-auto">
-          {displayBranches.map(branch => (
-            <SelectItem key={branch} value={branch}>{branch}</SelectItem>
-          ))}
-        </div>
-      </SelectContent>
-    </Select>
-  );
-};
+//   return (
+//     <Select defaultValue="master" onValueChange={onValueChange}>
+//       <SelectTrigger className="w-[120px]">
+//         <SelectValue placeholder="Branch" />
+//       </SelectTrigger>
+//       <SelectContent>
+//         <div className="p-2">
+//           <Input
+//             placeholder="Filter branches..."
+//             value={filter}
+//             onChange={(e) => setFilter(e.target.value)}
+//             className="mb-2"
+//           />
+//         </div>
+//         <div className="max-h-[300px] overflow-auto">
+//           {displayBranches.map(branch => (
+//             <SelectItem key={branch} value={branch}>{branch}</SelectItem>
+//           ))}
+//         </div>
+//       </SelectContent>
+//     </Select>
+//   );
+// };
 
-const RemoteSelect = ({ remotes = [], onValueChange }) => (
+const RemoteSelect = ({ remotes = [], onValueChange }: { remotes: string[], onValueChange: (value: string) => void }) => (
   <Select defaultValue="upstream" onValueChange={onValueChange}>
     <SelectTrigger className="w-[120px]">
       <SelectValue placeholder="Origin" />
     </SelectTrigger>
     <SelectContent>
-      {remotes.map(remote => (
+      {remotes.map((remote: string) => (
         <SelectItem key={remote} value={remote}>{remote}</SelectItem>
       ))}
     </SelectContent>
   </Select>
 );
 
-const CommitSearchInput = ({ value, onChange }) => (
+const CommitSearchInput = ({ value, onChange }: { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => (
   <Tooltip>
     <TooltipTrigger>
       <Input
@@ -81,7 +83,7 @@ const CommitSearchInput = ({ value, onChange }) => (
   </Tooltip>
 );
 
-const LoadingSpinner = ({ message }) => (
+const LoadingSpinner = ({ message }: { message?: string }) => (
   <div className="flex justify-center items-center h-full">
     <div className="flex flex-col items-center gap-2">
       <Loader2 className="w-6 h-6 animate-spin" />
@@ -90,7 +92,7 @@ const LoadingSpinner = ({ message }) => (
   </div>
 );
 
-const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick, onLoadMore, hasMore }) => {
+const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick, onLoadMore, hasMore }: { loading: boolean, commits: BasicCommit[], selectedFolder: string, onCommitClick: (commit: BasicCommit) => void, onLoadMore: () => void, hasMore: boolean }) => {
   if (loading && commits.length === 0) {
     return <LoadingSpinner message="Loading commits..." />;
   }
@@ -119,7 +121,7 @@ const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick, on
   );
 };
 
-const GitHistory = ({ className }) => {
+const GitHistory = ({ className }: { className?: string}) => {
   const {
     loading,
     detailsLoading,

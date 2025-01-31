@@ -16,6 +16,7 @@ interface StoreState {
   searchQuery: string;
   currentGeneratedFolder: string;
   folders: Folder[];
+  docFolderName: string
 }
 
 interface StoreActions {
@@ -39,6 +40,7 @@ const initialState: StoreState = {
   searchQuery: '',
   currentGeneratedFolder: '',
   folders: [],
+  docFolderName: '.mr-manager'
 };
 
 const useStore = create<StoreState & StoreActions>()(

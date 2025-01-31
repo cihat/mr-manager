@@ -79,6 +79,7 @@ const useGitHistory = () => {
     const fullPath = `${basePath}/${folder.name}`;
     setCurrentRepoPath(fullPath);
     try {
+      const baslangic = performance.now();
       const commits = await invoke<BasicCommit[]>('list_folder_commits', {
         path: fullPath,
         page: 1,
@@ -86,6 +87,14 @@ const useGitHistory = () => {
         branch,
         remote
       });
+      const bitis = performance.now();
+      //time diff
+      console.log('time diff >>', bitis - baslangic)
+      const minutes = Math.floor((bitis - baslangic) / 60000);
+      const seconds = ((bitis - baslangic) % 60000) / 1000;
+      console.log('minutes >>', minutes)
+      console.log('seconds >>', seconds)
+
       setCommits(commits);
 
       setError('');

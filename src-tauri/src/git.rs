@@ -1,25 +1,10 @@
-use dashmap::DashMap;
-use git2::{BranchType, Oid, Repository, Sort, Tree};
-use lru::LruCache;
+use moka::sync::Cache;
+use once_cell::sync::Lazy;
 use serde::Serialize;
-use std::{
-  num::NonZeroUsize,
-  path::{Path, PathBuf},
-  sync::Arc,
-  time::{Duration, SystemTime},
-};
-
-#[derive(Debug)]
-struct CommitCacheEntry {
-  commits: Arc<[BasicCommit]>,
-  timestamp: SystemTime,
-}
-
-use std::sync::LazyLock;
-
-static COMMIT_CACHE: LazyLock<DashMap<String, CommitCacheEntry>> = LazyLock::new(|| DashMap::new());
-const CACHE_TTL: Duration = Duration::from_secs(300);
-const TREE_CACHE_SIZE: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(4096) };
+use std::path::Path;
+use std::process::Command;
+use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(Serialize, Clone, Debug)]
 pub struct BasicCommit {
@@ -29,194 +14,48 @@ pub struct BasicCommit {
   pub date: i64,
 }
 
-pub fn find_git_root(start_path: &Path) -> Option<PathBuf> {
-  let mut current_path = start_path.to_path_buf();
-  while current_path.pop() {
-    if current_path.join(".git").exists() {
-      return Some(current_path);
-    }
-  }
-  None
+// Improved cache implementation using Moka
+const CACHE_TTL: Duration = Duration::from_secs(300);
+static COMMIT_CACHE: Lazy<Cache<String, Arc<[BasicCommit]>>> =
+  Lazy::new(|| Cache::builder().time_to_live(CACHE_TTL).build());
+
+pub fn find_git_root(start_path: &Path) -> Option<String> {
+  Command::new("git")
+    .args(["-C", start_path.to_str()?, "rev-parse", "--show-toplevel"])
+    .output()
+    .ok()
+    .and_then(|output| {
+      if output.status.success() {
+        String::from_utf8(output.stdout).ok()
+      } else {
+        None
+      }
+    })
+    .map(|s| s.trim().to_string())
 }
 
-fn get_cached_commits(key: &str) -> Option<Arc<[BasicCommit]>> {
-  COMMIT_CACHE.get(key).and_then(|entry| {
-    if entry.timestamp.elapsed().ok()? < CACHE_TTL {
-      Some(entry.commits.clone())
-    } else {
-      None
-    }
-  })
-}
-
-fn cache_commits(key: &str, commits: &[BasicCommit]) {
-  COMMIT_CACHE.insert(
-    key.to_string(),
-    CommitCacheEntry {
-      commits: Arc::from(commits),
-      timestamp: SystemTime::now(),
-    },
-  );
-}
-
-pub async fn process_commits(
-  path: &str,
-  branch: Option<String>,
-  remote: Option<String>,
-) -> Result<Vec<BasicCommit>, String> {
-  let path = Path::new(path);
-  let git_root = find_git_root(path).ok_or("Could not find Git repository")?;
-  let repo = Repository::open(&git_root).map_err(|e| format!("Failed to open repository: {e}"))?;
-  let relative_path = path
-    .strip_prefix(&git_root)
-    .map_err(|_| "Failed to get relative path")?
-    .to_str()
-    .ok_or("Invalid path")?;
-
-  let mut revwalk = repo.revwalk().map_err(|e| e.to_string())?;
-  revwalk.set_sorting(Sort::TIME | Sort::TOPOLOGICAL);
-  revwalk.simplify_first_parent();
-
-  // Handle branch/remote reference
-  if let Some(branch_name) = branch {
-    let ref_name = match remote {
-      Some(remote_name) => format!("refs/remotes/{}/{}", remote_name, branch_name),
-      None => format!("refs/heads/{}", branch_name),
-    };
-
-    let reference = repo
-      .find_reference(&ref_name)
-      .map_err(|e| format!("Failed to find reference '{}': {}", ref_name, e))?;
-    let oid = reference
-      .target()
-      .ok_or_else(|| format!("Reference '{}' has no target", ref_name))?;
-    revwalk
-      .push(oid)
-      .map_err(|e| format!("Failed to push OID {}: {}", oid, e))?;
-  } else {
-    revwalk
-      .push_head()
-      .map_err(|e| format!("Failed to push HEAD: {}", e))?;
-  }
-
+fn parse_git_log_output(output: &str) -> Vec<BasicCommit> {
   let mut commits = Vec::new();
-  let mut oid_cache = LruCache::new(TREE_CACHE_SIZE);
-  let path = Path::new(relative_path);
+  // Split commits using the null byte separator
+  for commit_block in output.split("\0<COMMIT>") {
+    let mut fields = commit_block.split('\0');
+    let id = fields.next().unwrap_or_default().trim().to_string();
+    let author = fields.next().unwrap_or_default().trim().to_string();
+    let date_str = fields.next().unwrap_or_default().trim();
+    let message = fields.next().unwrap_or_default().trim().to_string();
 
-  for oid in revwalk {
-    let oid = oid.map_err(|e| e.to_string())?;
-    let commit = repo.find_commit(oid).map_err(|e| e.to_string())?;
-
-    if is_path_modified(&commit, path, &repo, &mut oid_cache)? {
-      commits.push(create_basic_commit(&commit));
+    if id.is_empty() {
+      continue;
     }
+
+    commits.push(BasicCommit {
+      id,
+      author,
+      date: date_str.parse().unwrap_or(0),
+      message,
+    });
   }
-
-  Ok(commits)
-}
-
-fn is_path_modified(
-  commit: &git2::Commit,
-  path: &Path,
-  repo: &Repository,
-  cache: &mut LruCache<Oid, Option<Oid>>,
-) -> Result<bool, String> {
-  let commit_tree = commit.tree().map_err(|e| e.to_string())?;
-  let commit_oid = get_path_oid(&commit_tree, path, cache)?;
-
-  if commit.parent_count() == 0 {
-    return Ok(commit_oid.is_some());
-  }
-
-  let parent = match commit.parent(0) {
-    Ok(p) => p,
-    Err(_) => return Ok(false),
-  };
-
-  let parent_tree = parent.tree().map_err(|e| e.to_string())?;
-  let parent_oid = get_path_oid(&parent_tree, path, cache)?;
-
-  Ok(commit_oid != parent_oid)
-}
-
-fn get_path_oid(
-  tree: &Tree,
-  path: &Path,
-  cache: &mut LruCache<Oid, Option<Oid>>,
-) -> Result<Option<Oid>, String> {
-  let tree_oid = tree.id();
-
-  if let Some(oid) = cache.get(&tree_oid) {
-    return Ok(*oid);
-  }
-
-  let entry_oid = tree.get_path(path).ok().map(|entry| entry.id());
-  cache.put(tree_oid, entry_oid);
-  Ok(entry_oid)
-}
-
-fn create_basic_commit(commit: &git2::Commit) -> BasicCommit {
-  BasicCommit {
-    id: commit.id().to_string(),
-    message: commit.message().unwrap_or("").to_string(),
-    author: commit.author().name().unwrap_or("").to_string(),
-    date: commit.time().seconds(),
-  }
-}
-
-#[derive(Serialize)]
-pub struct GitReferences {
-  pub remotes: Vec<String>,
-  pub branches: Vec<String>,
-}
-
-pub fn get_git_references(path: &str) -> Result<GitReferences, String> {
-  let path = Path::new(path);
-  // let git_root = find_git_root(path).ok_or("Could not find Git repository")?;
-  let repo = Repository::open(&path).map_err(|e| format!("Failed to open repository: {e}"))?;
-
-  // Get list of remotes
-  let remotes = repo
-    .remotes()
-    .map_err(|e| format!("Failed to get remotes: {e}"))?
-    .iter()
-    .filter_map(|r| r.map(|s| s.to_string()))
-    .collect();
-
-  // Get list of branches (both local and remote)
-  let mut branches = Vec::new();
-
-  // Process local branches
-  repo
-    .branches(Some(BranchType::Local))
-    .map_err(|e| format!("Failed to get local branches: {e}"))?
-    .try_for_each(|b| {
-      let (branch, _) = b.map_err(|e| format!("Branch error: {e}"))?;
-      if let Some(name) = branch
-        .name()
-        .map_err(|e| format!("Branch name error: {e}"))?
-      {
-        branches.push(name.to_string());
-      }
-      Ok::<_, String>(())
-    })?;
-
-  // Process remote tracking branches
-  repo
-    .branches(Some(BranchType::Remote))
-    .map_err(|e| format!("Failed to get remote branches: {e}"))?
-    .try_for_each(|b| {
-      let (branch, _) = b.map_err(|e| format!("Branch error: {e}"))?;
-      if let Some(name) = branch
-        .name()
-        .map_err(|e| format!("Branch name error: {e}"))?
-      {
-        branches.push(name.to_string());
-      }
-      Ok::<_, String>(())
-    })?;
-
-  Ok(GitReferences { remotes, branches })
+  commits
 }
 
 pub async fn list_folder_commits(
@@ -228,8 +67,6 @@ pub async fn list_folder_commits(
 ) -> Result<Vec<BasicCommit>, String> {
   let page = page.unwrap_or(1);
   let per_page = per_page.unwrap_or(20).max(1);
-  let offset = (page - 1) * per_page;
-
   let cache_key = format!(
     "{}|{}|{}",
     path,
@@ -237,19 +74,102 @@ pub async fn list_folder_commits(
     remote.as_deref().unwrap_or("")
   );
 
-  let cached_commits = match get_cached_commits(&cache_key) {
-    Some(cached) => cached,
-    None => {
-      let commits = process_commits(&path, branch.clone(), remote.clone()).await?;
-      let arc_commits = Arc::from(commits.as_slice());
-      cache_commits(&cache_key, &arc_commits);
-      arc_commits
-    }
-  };
+  // Try to get from cache first
+  if let Some(cached) = COMMIT_CACHE.get(&cache_key) {
+    let start = (page - 1) * per_page;
+    return Ok(
+      cached
+        .get(start..)
+        .and_then(|s| s.get(..per_page))
+        .unwrap_or_default()
+        .to_vec(),
+    );
+  }
 
-  let total = cached_commits.len();
-  let start = offset.min(total);
-  let end = (offset + per_page).min(total);
+  // Construct git log command
+  let git_root = find_git_root(Path::new(&path)).ok_or("Could not find Git repository")?;
+  let relative_path = Path::new(&path)
+    .strip_prefix(&git_root)
+    .map_err(|_| "Failed to get relative path")?
+    .to_str()
+    .ok_or("Invalid path")?;
 
-  Ok(cached_commits[start..end].to_vec())
+  let mut cmd = Command::new("git");
+  cmd
+    .arg("-C")
+    .arg(&git_root)
+    .arg("log")
+    .arg("--format=%H%x00%an%x00%at%x00%B%x00<COMMIT>") // Null-separated format
+    .arg("--")
+    .arg(relative_path);
+
+  if let Some(branch_name) = branch {
+    let ref_name = remote
+      .map(|r| format!("{}/{}", r, branch_name))
+      .unwrap_or(branch_name);
+    cmd.arg(ref_name);
+  }
+
+  let output = cmd
+    .output()
+    .map_err(|e| format!("Failed to execute git command: {}", e))?;
+
+  if !output.status.success() {
+    return Err(String::from_utf8_lossy(&output.stderr).to_string());
+  }
+
+  let output_str = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
+  let all_commits = parse_git_log_output(&output_str);
+  let all_commits_arc: Arc<[BasicCommit]> = Arc::from(all_commits.into_boxed_slice());
+
+  // Cache the results
+  COMMIT_CACHE.insert(cache_key, all_commits_arc.clone());
+
+  // Paginate results
+  let start = (page - 1) * per_page;
+  Ok(
+    all_commits_arc
+      .get(start..)
+      .and_then(|s| s.get(..per_page))
+      .unwrap_or_default()
+      .to_vec(),
+  )
+}
+
+pub fn get_git_references(path: &str) -> Result<GitReferences, String> {
+  // Get remotes
+  let remotes_output = Command::new("git")
+    .arg("-C")
+    .arg(path)
+    .arg("remote")
+    .output()
+    .map_err(|e| format!("Failed to get remotes: {}", e))?;
+
+  let remotes = String::from_utf8_lossy(&remotes_output.stdout)
+    .lines()
+    .map(|s| s.to_string())
+    .collect();
+
+  // Get branches
+  // let branches_output = Command::new("git")
+  //   .arg("-C")
+  //   .arg(path)
+  //   .arg("branch")
+  //   .arg("-a")
+  //   .output()
+  //   .map_err(|e| format!("Failed to get branches: {}", e))?;
+
+  // let branches = String::from_utf8_lossy(&branches_output.stdout)
+  //   .lines()
+  //   .map(|s| s.trim().trim_start_matches("* ").to_string())
+  //   .collect();
+  let branches = vec!["master".to_string()];
+
+  Ok(GitReferences { remotes, branches })
+}
+
+#[derive(Serialize)]
+pub struct GitReferences {
+  pub remotes: Vec<String>,
+  pub branches: Vec<String>,
 }

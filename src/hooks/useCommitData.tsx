@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import useGitHistoryStore from "@/store/gitHistory";

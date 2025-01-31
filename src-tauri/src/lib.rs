@@ -91,13 +91,6 @@ fn list_folders(path: String) -> Result<Vec<String>, String> {
   Ok(entries)
 }
 
-struct BasicCommit {
-  id: String,
-  message: String,
-  author: String,
-  date: i64,
-}
-
 #[derive(Serialize)]
 struct DetailedCommit {
   id: String,
