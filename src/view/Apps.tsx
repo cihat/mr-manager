@@ -16,6 +16,9 @@ const Apps = () => {
 
     <div>
       <FolderList folders={folders} onClick={onFolderClick} icon={TimerReset} selectedFolder={selectedFolder} />
+      <div className="w-full h-96 bg-gray-100 block">
+        <h1>aliveli</h1>
+      </div>
 
     </div>
   );

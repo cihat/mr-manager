@@ -8,7 +8,7 @@ function App() {
   return (
     <Layout>
       <Routes>
-        <Route path="/apps" element={<Apps />} />
+        <Route path="/bash" element={<Apps />} />
         <Route path="/docs" element={<Docs />} />
         <Route path="/history" element={<GitHistory />} />
       </Routes>

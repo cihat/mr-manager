@@ -6,6 +6,8 @@ import { getCommitUrl } from '@/utils/git';
 import DiffViewer from '@/components/git-components/diff-viewer';
 import { useEffect, useState } from "react";
 import { DetailedCommit } from "@/types";
+import { Tooltip, TooltipContent } from "../ui/tooltip";
+import { TooltipTrigger } from "@radix-ui/react-tooltip";
 
 
 interface CommitDetailsProps {
@@ -113,22 +115,27 @@ const CommitDetails: React.FC<CommitDetailsProps> = ({ commit, repoPath }) => {
             Changes ({commit.changes.length})
           </h4>
           {commit.changes.map((change, idx) => (
-            <div
-              key={idx}
-              className={cn(
-                "flex flex-col gap-2 px-2 py-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors",
-                selectedFile === change.file && "bg-muted"
-              )}
-              onClick={() => handleFileClick(change.file)}
-            >
-              <Badge variant="outline" className={cn("font-medium w-fit", getStatusColor(change.status))}>
-                {change.status}
-              </Badge>
-              <div className="flex items-center gap-2 text-sm">
-                <FileIcon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
-                <span className="truncate text-xs">{change.file}</span>
-              </div>
-            </div>
+            <Tooltip>
+              <TooltipTrigger>
+                <div
+                  key={idx}
+                  className={cn(
+                    "flex flex-col gap-2 px-2 py-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors",
+                    selectedFile === change.file && "bg-muted"
+                  )}
+                  onClick={() => handleFileClick(change.file)}
+                >
+                  <Badge variant="outline" className={cn("font-medium w-fit", getStatusColor(change.status))}>
+                    {change.status}
+                  </Badge>
+                  <div className="flex items-center gap-2 text-sm">
+                    <FileIcon className="w-4 h-4 flex-shrink-0 text-muted-foreground" />
+                    <span className="truncate text-xs">{change.file}</span>
+                  </div>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent sideOffset={1}>{change.file}</TooltipContent>
+            </Tooltip>
           ))}
         </div>
 
