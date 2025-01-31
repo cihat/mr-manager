@@ -13,21 +13,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-import Fuse from 'fuse.js';
-
-const BranchSelect = ({ branches = [], onValueChange: any  }) => {
+const BranchSelect = ({ branches, onValueChange }) => {
   const [filter, setFilter] = useState('');
-
-  const fuse = new Fuse(branches, {
-    threshold: 0.3,
-    distance: 100
-  });
-
-  const filteredBranches = filter
-    ? fuse.search(filter).map(result => result.item)
-    : branches;
-
-  const displayBranches = filteredBranches.slice(0, 100);
+  const filteredBranches = Array.isArray(branches) 
+    ? branches
+        .filter(branch => branch.toLowerCase().includes(filter.toLowerCase()))
+        .slice(0, 100)
+    : [];
 
   return (
     <Select defaultValue="master" onValueChange={onValueChange}>
@@ -44,7 +36,7 @@ const BranchSelect = ({ branches = [], onValueChange: any  }) => {
           />
         </div>
         <div className="max-h-[300px] overflow-auto">
-          {displayBranches.map(branch => (
+          {filteredBranches.map(branch => (
             <SelectItem key={branch} value={branch}>{branch}</SelectItem>
           ))}
         </div>
@@ -53,25 +45,29 @@ const BranchSelect = ({ branches = [], onValueChange: any  }) => {
   );
 };
 
-const RemoteSelect = ({ remotes = [], onValueChange }) => (
-  <Select defaultValue="upstream" onValueChange={onValueChange}>
-    <SelectTrigger className="w-[120px]">
-      <SelectValue placeholder="Origin" />
-    </SelectTrigger>
-    <SelectContent>
-      {remotes.map(remote => (
-        <SelectItem key={remote} value={remote}>{remote}</SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-);
+const RemoteSelect = ({ remotes, onValueChange }) => {
+  const remotesList = Array.isArray(remotes) ? remotes : [];
+  
+  return (
+    <Select defaultValue="upstream" onValueChange={onValueChange}>
+      <SelectTrigger className="w-[120px]">
+        <SelectValue placeholder="Origin" />
+      </SelectTrigger>
+      <SelectContent>
+        {remotesList.map(remote => (
+          <SelectItem key={remote} value={remote}>{remote}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+};
 
 const CommitSearchInput = ({ value, onChange }) => (
   <Tooltip>
     <TooltipTrigger>
-      <Input
-        placeholder='Search author, message, id'
-        value={value}
+      <Input 
+        placeholder='Search author, message, id' 
+        value={value} 
         onChange={onChange}
       />
     </TooltipTrigger>
@@ -91,11 +87,13 @@ const LoadingSpinner = ({ message }) => (
 );
 
 const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick, onLoadMore, hasMore }) => {
-  if (loading && commits.length === 0) {
+  const commitsList = Array.isArray(commits) ? commits : [];
+
+  if (loading && commitsList.length === 0) {
     return <LoadingSpinner message="Loading commits..." />;
   }
 
-  if (commits.length === 0) {
+  if (commitsList.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
         <GitCommitIcon className="w-8 h-8 mb-2" />
@@ -106,7 +104,7 @@ const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick, on
 
   return (
     <div className="space-y-4">
-      <CommitList commits={commits} onCommitClick={onCommitClick} />
+      <CommitList commits={commitsList} onCommitClick={onCommitClick} />
       {hasMore && (
         <div className="flex justify-center">
           <Button variant="outline" onClick={onLoadMore} disabled={loading}>
@@ -139,8 +137,10 @@ const GitHistory = ({ className }) => {
     hasMore,
     setRemote,
     setBranch,
-    references: { branches, remotes }
+    references
   } = useGitHistory();
+
+  const { branches = [], remotes = [] } = references || {};
 
   return (
     <div className={cn("", className)}>
@@ -149,10 +149,10 @@ const GitHistory = ({ className }) => {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-
+      
       <SubHeader title='History' icon='history'>
         <div className='ml-auto mr-5 flex gap-2'>
-          {/* <BranchSelect branches={branches} onValueChange={setBranch} /> */}
+          <BranchSelect branches={branches} onValueChange={setBranch} />
           <RemoteSelect remotes={remotes} onValueChange={setRemote} />
           <CommitSearchInput value={searchQuery} onChange={handleSearch} />
         </div>
@@ -161,7 +161,7 @@ const GitHistory = ({ className }) => {
       <div className="grid grid-cols-4 h-[calc(100vh-8rem)]">
         <div className="overflow-scroll max-h-[calc(100vh-136px)]">
           <FolderList
-            folders={folders}
+            folders={folders || []}
             onClick={handleFolderClick}
             icon={TimerReset}
             selectedFolder={selectedFolder}

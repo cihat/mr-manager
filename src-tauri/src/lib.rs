@@ -1,4 +1,5 @@
 mod git;
+use git::GitReferences;
 use git2::{DiffOptions, Oid, Repository};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -130,8 +131,15 @@ async fn list_folder_commits(
   path: String,
   page: Option<usize>,
   per_page: Option<usize>,
+  branch: Option<String>,
+  remote: Option<String>,
 ) -> Result<Vec<git::BasicCommit>, String> {
-  git::list_folder_commits(path, page, per_page).await
+  git::list_folder_commits(path, page, per_page, branch, remote).await
+}
+
+#[tauri::command]
+fn get_git_references(path: &str) -> Result<GitReferences, String> {
+  git::get_git_references(path)
 }
 
 #[tauri::command]
@@ -281,7 +289,8 @@ pub fn run() {
       list_folders,
       list_folder_commits,
       get_commit_details,
-      get_commit_diff
+      get_commit_diff,
+      get_git_references
     ]) // Combined into single handler
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())

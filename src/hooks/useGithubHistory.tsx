@@ -5,6 +5,7 @@ import useAppStore from "@/store";
 import { BasicCommit, DetailedCommit } from "@/types";
 // @ts-ignore
 import FuzzySearch from 'fuzzy-search';
+import Fuse from 'fuse.js';
 
 const useGitHistory = () => {
   const [loading, setLoading] = useState(false);
@@ -16,11 +17,13 @@ const useGitHistory = () => {
   const [currentRepoPath, setCurrentRepoPath] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [branch, setBranch] = useState('master');
+  const [remote, setRemote] = useState('origin');
+  const [references, setReferences] = useState<string[]>([]);
   const perPage = 20;
 
   const { monoRepoPath, selectedFolder, getLibsPath, getAppsPath, setSelectedFolder } = useGitHistoryStore();
   const { currentView, folders, setFolders } = useAppStore();
-
   const loadFolders = useCallback(async () => {
     const basePath = currentView === "libs" ? getLibsPath(monoRepoPath) : getAppsPath(monoRepoPath);
     try {
@@ -48,6 +51,25 @@ const useGitHistory = () => {
     setSearchQuery('');
   }, [selectedFolder]);
 
+
+  const handleListReferences = async () => {
+    try {
+      console.log('monoRepoPath >>', monoRepoPath)
+
+      const refs = await invoke<string[]>('get_git_references', {
+        path: monoRepoPath,
+      });
+      setReferences(refs);
+    } catch (error) {
+      console.error('Failed to load references:', error);
+      setError(`Failed to load references: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+
+  useEffect(() => {
+    handleListReferences();
+  }, []);
+
   const handleFolderClick = async (folder: any) => {
     setCurrentPage(1);
     setLoading(true);
@@ -60,7 +82,9 @@ const useGitHistory = () => {
       const commits = await invoke<BasicCommit[]>('list_folder_commits', {
         path: fullPath,
         page: 1,
-        per_page: perPage
+        per_page: perPage,
+        branch,
+        remote
       });
       setCommits(commits);
 
@@ -116,13 +140,13 @@ const useGitHistory = () => {
 
   const searchedCommits = useMemo(() => {
     if (!searchQuery) return commits;
-    console.log('commits >>', commits)
 
-
-    const searcher = new FuzzySearch(commits, ['author', 'message', 'id'], {
-      caseSensitive: false,
+    const fuse = new Fuse(commits, {
+      keys: ['author', 'message', 'id'],
+      includeScore: true,
     });
-    return searcher.search(searchQuery);
+
+    return fuse.search(searchQuery).map((result) => result.item);
   }, [commits, searchQuery]);
 
   const handleSearch = (e: ChangeEvent<HTMLInputElement>) => {
@@ -139,14 +163,17 @@ const useGitHistory = () => {
     currentRepoPath,
     folders,
     selectedFolder,
+    searchQuery,
+    hasMore: commits.length >= currentPage * perPage,
     handleFolderClick,
     handleCommitClick,
     setIsDetailsOpen,
     setError,
     handleSearch,
-    searchQuery,
     loadMore,
-    hasMore: commits.length >= currentPage * perPage
+    setBranch,
+    setRemote,
+    references
   };
 };
 
