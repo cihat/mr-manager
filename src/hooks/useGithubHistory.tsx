@@ -1,24 +1,27 @@
-import React, { useMemo } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 import useGitHistoryStore from "@/store/gitHistory";
 import { invoke } from '@tauri-apps/api/core';
 import useAppStore from "@/store";
 import { BasicCommit, DetailedCommit } from "@/types";
+// @ts-ignore
 import FuzzySearch from 'fuzzy-search';
 
 const useGitHistory = () => {
-  const [loading, setLoading] = React.useState(false);
-  const [detailsLoading, setDetailsLoading] = React.useState(false);
-  const [error, setError] = React.useState('');
-  const [commits, setCommits] = React.useState<BasicCommit[]>([]);
-  const [selectedCommit, setSelectedCommit] = React.useState<DetailedCommit | null>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
-  const [currentRepoPath, setCurrentRepoPath] = React.useState('');
-  const [searchQuery, setSearchQuery] = React.useState('');
-  
+  const [loading, setLoading] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [commits, setCommits] = useState<BasicCommit[]>([]);
+  const [selectedCommit, setSelectedCommit] = useState<DetailedCommit | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [currentRepoPath, setCurrentRepoPath] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const perPage = 20;
+
   const { monoRepoPath, selectedFolder, getLibsPath, getAppsPath, setSelectedFolder } = useGitHistoryStore();
   const { currentView, folders, setFolders } = useAppStore();
 
-  const loadFolders = React.useCallback(async () => {
+  const loadFolders = useCallback(async () => {
     const basePath = currentView === "libs" ? getLibsPath(monoRepoPath) : getAppsPath(monoRepoPath);
     try {
       const result = await invoke<string[]>('list_folders', { path: basePath });
@@ -31,11 +34,22 @@ const useGitHistory = () => {
     }
   }, [currentView, monoRepoPath, getLibsPath, getAppsPath, setFolders]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     loadFolders();
   }, [loadFolders]);
 
+  // useEffect(() => {
+  //   if (folders.length > 0) {
+  //     handleFolderClick(folders[0]);
+  //   }
+  // }, [folders]);
+
+  useEffect(() => {
+    setSearchQuery('');
+  }, [selectedFolder]);
+
   const handleFolderClick = async (folder: any) => {
+    setCurrentPage(1);
     setLoading(true);
     setCommits([]);
     setSelectedFolder(folder.name);
@@ -43,12 +57,41 @@ const useGitHistory = () => {
     const fullPath = `${basePath}/${folder.name}`;
     setCurrentRepoPath(fullPath);
     try {
-      const commits = await invoke<BasicCommit[]>('list_folder_commits', { path: fullPath, limit: 50 });
+      const commits = await invoke<BasicCommit[]>('list_folder_commits', {
+        path: fullPath,
+        page: 1,
+        per_page: perPage
+      });
       setCommits(commits);
+
       setError('');
     } catch (error) {
       console.error('Failed to load commits:', error);
       setError(`Failed to load commits: ${error instanceof Error ? error.message : error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMore = async () => {
+    setLoading(true);
+    try {
+      const nextPage = currentPage + 1;
+      const newCommits = await invoke<BasicCommit[]>('list_folder_commits', {
+        path: currentRepoPath,
+        page: nextPage,
+        per_page: perPage
+      });
+      if (newCommits.length === 0) {
+        // No more commits to load
+        return;
+      }
+      setCommits(prev => [...prev, ...newCommits]);
+      setCurrentPage(nextPage);
+      setError('');
+    } catch (error) {
+      console.error('Failed to load more commits:', error);
+      setError(`Failed to load more commits: ${error instanceof Error ? error.message : error}`);
     } finally {
       setLoading(false);
     }
@@ -82,7 +125,7 @@ const useGitHistory = () => {
     return searcher.search(searchQuery);
   }, [commits, searchQuery]);
 
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearch = (e: ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
   };
 
@@ -101,7 +144,9 @@ const useGitHistory = () => {
     setIsDetailsOpen,
     setError,
     handleSearch,
-    searchQuery
+    searchQuery,
+    loadMore,
+    hasMore: commits.length >= currentPage * perPage
   };
 };
 

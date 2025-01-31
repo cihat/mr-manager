@@ -14,7 +14,7 @@ export default function Layout({ children }: LayoutProps) {
       <AppSidebar />
       <SidebarInset>
         <Header />
-        <main className="flex h-full bg-background">
+        <main className="h-full bg-background block">
           {children}
         </main>
         <Toaster />

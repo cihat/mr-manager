@@ -1,7 +1,7 @@
 import React from 'react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import FolderList from "@/components/folder-list";
-import { Loader2, GitCommit as GitCommitIcon, TimerReset, History } from "lucide-react";
+import { Loader2, GitCommit as GitCommitIcon, TimerReset } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BasicCommit } from '@/types';
 import CommitList from '@/components/git-components/commit-list';
@@ -10,6 +10,7 @@ import CommitDetailsDialog from '@/components/git-components/commit-details-dial
 import SubHeader from '@/components/sub-header';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
 
 const LoadingSpinner: React.FC<{ message?: string }> = ({ message }) => (
   <div className="flex justify-center items-center h-full">
@@ -31,11 +32,31 @@ const CommitListSection: React.FC<{
   commits: BasicCommit[];
   selectedFolder: string | null;
   onCommitClick: (commit: BasicCommit) => void;
-}> = ({ loading, commits, selectedFolder, onCommitClick }) => {
-  if (loading) return <LoadingSpinner message="Loading commits..." />;
+  onLoadMore: () => void;
+  hasMore: boolean;
+}> = ({ loading, commits, selectedFolder, onCommitClick, onLoadMore, hasMore }) => {
+  if (loading && commits.length === 0) {
+    return <LoadingSpinner message="Loading commits..." />;
+  }
 
   return commits.length > 0 ? (
-    <CommitList commits={commits} onCommitClick={onCommitClick} />
+    <div className="space-y-4">
+      <CommitList commits={commits} onCommitClick={onCommitClick} />
+      {hasMore && (
+        <div className="flex justify-center">
+          <Button
+            variant="outline"
+            onClick={onLoadMore}
+            disabled={loading}
+          >
+            {loading ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : null}
+            {loading ? 'Loading...' : 'Load More'}
+          </Button>
+        </div>
+      )}
+    </div>
   ) : (
     <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
       <GitCommitIcon className="w-8 h-8 mb-2" />
@@ -43,7 +64,6 @@ const CommitListSection: React.FC<{
     </div>
   );
 };
-
 const FolderListSection: React.FC<{
   folders: any[];
   onFolderClick: (folder: any) => void;
@@ -68,7 +88,10 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
     handleFolderClick,
     handleCommitClick,
     setIsDetailsOpen,
+    searchQuery,
     handleSearch,
+    loadMore,
+    hasMore,
   } = useGitHistory();
 
   return (
@@ -78,7 +101,7 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
         <div className='ml-auto mr-5'>
           <Tooltip>
             <TooltipTrigger>
-              <Input placeholder='Search author, message, id' onChange={handleSearch} />
+              <Input placeholder='Search author, message, id' onChange={handleSearch} value={searchQuery}/>
             </TooltipTrigger>
             <TooltipContent sideOffset={5}>Search commits by message, author, commit id</TooltipContent>
           </Tooltip>
@@ -93,6 +116,8 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
             commits={commits}
             selectedFolder={selectedFolder}
             onCommitClick={handleCommitClick}
+            onLoadMore={loadMore}
+            hasMore={hasMore}
           />
         </div>
       </div>

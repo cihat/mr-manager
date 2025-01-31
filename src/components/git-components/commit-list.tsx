@@ -7,6 +7,18 @@ const CommitList: React.FC<{
 }> = ({ commits, onCommitClick }) => {
   if (!commits.length) return null;
 
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleString('en-US', {
+      month: 'numeric',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  };
+
   return (
     <div className="space-y-2">
       {commits.map((commit) => (
@@ -24,7 +36,7 @@ const CommitList: React.FC<{
                 <span>•</span>
                 <span>{commit.author}</span>
                 <span>•</span>
-                <span>{new Date(commit.date * 1000).toLocaleDateString()}</span>
+                <span>{formatDate(commit.date)}</span>
               </div>
             </div>
           </div>

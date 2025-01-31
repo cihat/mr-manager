@@ -128,9 +128,10 @@ fn find_git_root(start_path: &Path) -> Option<PathBuf> {
 #[tauri::command]
 async fn list_folder_commits(
   path: String,
-  limit: Option<usize>,
+  page: Option<usize>,
+  per_page: Option<usize>,
 ) -> Result<Vec<git::BasicCommit>, String> {
-  git::list_folder_commits(path, limit).await
+  git::list_folder_commits(path, page, per_page).await
 }
 
 #[tauri::command]

@@ -63,7 +63,7 @@ fn cache_commits(path: &str, commits: &[BasicCommit]) {
   }
 }
 
-pub async fn process_commits(path: &str, limit: usize) -> Result<Vec<BasicCommit>, String> {
+pub async fn process_commits(path: &str) -> Result<Vec<BasicCommit>, String> {
   let path = Path::new(path);
   let git_root = find_git_root(path).ok_or("Could not find Git repository")?;
   let repo =
@@ -81,15 +81,11 @@ pub async fn process_commits(path: &str, limit: usize) -> Result<Vec<BasicCommit
   revwalk.simplify_first_parent().map_err(|e| e.to_string())?;
   revwalk.push_head().map_err(|e| e.to_string())?;
 
-  let mut commits = Vec::with_capacity(limit);
+  let mut commits = Vec::new();
   let mut oid_cache = HashMap::new();
   let path = Path::new(relative_path);
 
   for oid in revwalk {
-    if commits.len() >= limit {
-      break;
-    }
-
     let oid = oid.map_err(|e| e.to_string())?;
     let commit = repo.find_commit(oid).map_err(|e| e.to_string())?;
 
@@ -171,18 +167,34 @@ fn create_basic_commit(commit: &git2::Commit) -> BasicCommit {
 
 pub async fn list_folder_commits(
   path: String,
-  limit: Option<usize>,
+  page: Option<usize>,
+  per_page: Option<usize>,
 ) -> Result<Vec<BasicCommit>, String> {
-  let limit = limit.unwrap_or(20);
-  if limit == 0 {
+  let page = page.unwrap_or(1);
+  let per_page = per_page.unwrap_or(20);
+
+  if page == 0 || per_page == 0 {
     return Ok(Vec::new());
   }
 
-  if let Some(cached) = get_cached_commits(&path) {
-    return Ok(cached);
+  let offset = (page - 1) * per_page;
+
+  let cached_commits = if let Some(cached) = get_cached_commits(&path) {
+    cached
+  } else {
+    let commits = process_commits(&path).await?;
+    cache_commits(&path, &commits);
+    commits
+  };
+
+  let total_commits = cached_commits.len();
+  let start = offset;
+  let end = offset + per_page;
+
+  if start >= total_commits {
+    return Ok(Vec::new());
   }
 
-  let commits = process_commits(&path, limit).await?;
-  cache_commits(&path, &commits);
-  Ok(commits)
+  let end = std::cmp::min(end, total_commits);
+  Ok(cached_commits[start..end].to_vec())
 }
