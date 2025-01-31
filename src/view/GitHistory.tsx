@@ -7,6 +7,7 @@ import { BasicCommit } from '@/types';
 import CommitList from '@/components/git-components/commit-list';
 import useGitHistory from '@/hooks/useGithubHistory';
 import CommitDetailsDialog from '@/components/git-components/commit-details-dialog';
+import SubHeader from '@/components/sub-header';
 
 const LoadingSpinner: React.FC<{ message?: string }> = ({ message }) => (
   <div className="flex justify-center items-center h-full">
@@ -51,13 +52,6 @@ const FolderListSection: React.FC<{
   </div>
 );
 
-const Header = () => (
-  <div className="flex items-center pl-3 pt-2 pb-0 bg-background">
-    <History className="w-8 h-8" />
-    <h3 className="font-semibold text-2xl">History</h3>
-  </div>
-);
-
 const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
   const {
     loading,
@@ -77,7 +71,7 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
   return (
     <div className={cn("", className)}>
       {error && <ErrorAlert message={error} />}
-      <Header />
+      <SubHeader title='History' icon='history' />
       <div className="grid grid-cols-4 h-[calc(100vh-8rem)]">
         <FolderListSection folders={folders} onFolderClick={handleFolderClick} selectedFolder={selectedFolder} />
 
