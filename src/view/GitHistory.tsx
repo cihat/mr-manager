@@ -78,9 +78,9 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
         <div className='ml-auto mr-5'>
           <Tooltip>
             <TooltipTrigger>
-              <Input placeholder='Search author, message' onChange={handleSearch} />
+              <Input placeholder='Search author, message, id' onChange={handleSearch} />
             </TooltipTrigger>
-            <TooltipContent sideOffset={5}>Search commits by message, author, id</TooltipContent>
+            <TooltipContent sideOffset={5}>Search commits by message, author, commit id</TooltipContent>
           </Tooltip>
         </div>
       </SubHeader >

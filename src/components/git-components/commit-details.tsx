@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { Loader2, GitCommit as GitCommitIcon, FileIcon, Github } from "lucide-react";
 import { getCommitUrl } from '@/utils/git';
 import DiffViewer from '@/components/git-components/diff-viewer';
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DetailedCommit } from "@/types";
 
 
@@ -75,6 +75,12 @@ const CommitDetails: React.FC<CommitDetailsProps> = ({ commit, repoPath }) => {
       setLoadingDiff(false);
     }
   };
+
+  useEffect(() => {
+    if (commit.changes.length > 0) {
+      handleFileClick(commit.changes[0].file);
+    }
+  }, [commit]);
 
 
   return (

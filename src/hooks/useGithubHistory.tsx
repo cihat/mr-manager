@@ -74,8 +74,8 @@ const useGitHistory = () => {
   const searchedCommits = useMemo(() => {
     if (!searchQuery) return commits;
     console.log('commits >>', commits)
-    
-    
+
+
     const searcher = new FuzzySearch(commits, ['author', 'message', 'id'], {
       caseSensitive: false,
     });

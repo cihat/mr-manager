@@ -10,7 +10,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   return (
-    <SidebarProvider>
+    <SidebarProvider className="subpixel-antialiased">
       <AppSidebar />
       <SidebarInset>
         <Header />
