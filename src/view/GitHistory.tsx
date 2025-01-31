@@ -8,6 +8,8 @@ import CommitList from '@/components/git-components/commit-list';
 import useGitHistory from '@/hooks/useGithubHistory';
 import CommitDetailsDialog from '@/components/git-components/commit-details-dialog';
 import SubHeader from '@/components/sub-header';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const LoadingSpinner: React.FC<{ message?: string }> = ({ message }) => (
   <div className="flex justify-center items-center h-full">
@@ -66,12 +68,22 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
     handleFolderClick,
     handleCommitClick,
     setIsDetailsOpen,
+    handleSearch,
   } = useGitHistory();
 
   return (
     <div className={cn("", className)}>
       {error && <ErrorAlert message={error} />}
-      <SubHeader title='History' icon='history' />
+      <SubHeader title='History' icon='history'>
+        <div className='ml-auto mr-5'>
+          <Tooltip>
+            <TooltipTrigger>
+              <Input placeholder='Search author, message' onChange={handleSearch} />
+            </TooltipTrigger>
+            <TooltipContent sideOffset={5}>Search commits by message, author, id</TooltipContent>
+          </Tooltip>
+        </div>
+      </SubHeader >
       <div className="grid grid-cols-4 h-[calc(100vh-8rem)]">
         <FolderListSection folders={folders} onFolderClick={handleFolderClick} selectedFolder={selectedFolder} />
 
@@ -91,7 +103,7 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
         detailsLoading={detailsLoading}
         currentRepoPath={currentRepoPath}
       />
-    </div>
+    </div >
   );
 };
 

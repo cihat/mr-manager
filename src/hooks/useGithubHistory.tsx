@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useMemo } from "react";
 import useGitHistoryStore from "@/store/gitHistory";
 import { invoke } from '@tauri-apps/api/core';
 import useAppStore from "@/store";
 import { BasicCommit, DetailedCommit } from "@/types";
+import FuzzySearch from 'fuzzy-search';
 
 const useGitHistory = () => {
   const [loading, setLoading] = React.useState(false);
@@ -12,7 +13,8 @@ const useGitHistory = () => {
   const [selectedCommit, setSelectedCommit] = React.useState<DetailedCommit | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = React.useState(false);
   const [currentRepoPath, setCurrentRepoPath] = React.useState('');
-
+  const [searchQuery, setSearchQuery] = React.useState('');
+  
   const { monoRepoPath, selectedFolder, getLibsPath, getAppsPath, setSelectedFolder } = useGitHistoryStore();
   const { currentView, folders, setFolders } = useAppStore();
 
@@ -37,11 +39,9 @@ const useGitHistory = () => {
     setLoading(true);
     setCommits([]);
     setSelectedFolder(folder.name);
-
     const basePath = currentView === "libs" ? getLibsPath(monoRepoPath) : getAppsPath(monoRepoPath);
     const fullPath = `${basePath}/${folder.name}`;
     setCurrentRepoPath(fullPath);
-
     try {
       const commits = await invoke<BasicCommit[]>('list_folder_commits', { path: fullPath, limit: 50 });
       setCommits(commits);
@@ -71,11 +71,26 @@ const useGitHistory = () => {
     }
   };
 
+  const searchedCommits = useMemo(() => {
+    if (!searchQuery) return commits;
+    console.log('commits >>', commits)
+    
+    
+    const searcher = new FuzzySearch(commits, ['author', 'message', 'id'], {
+      caseSensitive: false,
+    });
+    return searcher.search(searchQuery);
+  }, [commits, searchQuery]);
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
   return {
     loading,
     detailsLoading,
     error,
-    commits,
+    commits: searchedCommits, // Return filtered commits instead of raw commits
     selectedCommit,
     isDetailsOpen,
     currentRepoPath,
@@ -85,7 +100,9 @@ const useGitHistory = () => {
     handleCommitClick,
     setIsDetailsOpen,
     setError,
+    handleSearch,
+    searchQuery
   };
 };
 
-export default useGitHistory
+export default useGitHistory;

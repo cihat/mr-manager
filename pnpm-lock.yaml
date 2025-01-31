@@ -68,6 +68,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      fuzzy-search:
+        specifier: ^3.2.1
+        version: 3.2.1
       lucide-react:
         specifier: ^0.473.0
         version: 0.473.0(react@18.3.1)
@@ -1231,6 +1234,9 @@ packages:
 
   function-bind@1.1.2:
     resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
+
+  fuzzy-search@3.2.1:
+    resolution: {integrity: sha512-vAcPiyomt1ioKAsAL2uxSABHJ4Ju/e4UeDM+g1OlR0vV4YhLGMNsdLNvZTpEDY4JCSt0E4hASCNM5t2ETtsbyg==}
 
   gensync@1.0.0-beta.2:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
@@ -2813,6 +2819,8 @@ snapshots:
     optional: true
 
   function-bind@1.1.2: {}
+
+  fuzzy-search@3.2.1: {}
 
   gensync@1.0.0-beta.2: {}
 
