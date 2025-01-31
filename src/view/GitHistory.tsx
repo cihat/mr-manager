@@ -44,9 +44,10 @@ const CommitListSection: React.FC<{
 const FolderListSection: React.FC<{
   folders: any[];
   onFolderClick: (folder: any) => void;
-}> = ({ folders, onFolderClick }) => (
+  selectedFolder: any
+}> = ({ folders, onFolderClick, selectedFolder }) => (
   <div className="overflow-scroll max-h-[calc(100vh-136px)]">
-    <FolderList folders={folders} onClick={onFolderClick} icon={TimerReset} />
+    <FolderList folders={folders} onClick={onFolderClick} icon={TimerReset} selectedFolder={selectedFolder} />
   </div>
 );
 
@@ -78,7 +79,7 @@ const GitHistory: React.FC<{ className?: string }> = ({ className }) => {
       {error && <ErrorAlert message={error} />}
       <Header />
       <div className="grid grid-cols-4 h-[calc(100vh-8rem)]">
-        <FolderListSection folders={folders} onFolderClick={handleFolderClick} />
+        <FolderListSection folders={folders} onFolderClick={handleFolderClick} selectedFolder={selectedFolder} />
 
         <div className="p-4 col-span-3 overflow-scroll max-h-[calc(100vh-136px)]">
           <CommitListSection

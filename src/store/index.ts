@@ -59,18 +59,12 @@ const useStore = create<StoreState & StoreActions>()(
       },
       setCurrentGeneratedFolder: (folderName) =>
         set({ currentGeneratedFolder: folderName }),
-      setSearchQuery: (query) =>
-        set({ searchQuery: query }),
-      setCurrentView: (view) =>
-        set({ currentView: view }),
-      setMonoRepoPath: (path) =>
-        set({ monoRepoPath: path }),
-      resetMonoRepoPath: () =>
-        set({ monoRepoPath: '' }),
-      setSelectedFolder: (folder) =>
-        set({ selectedFolder: folder }),
-      setError: (error) =>
-        set({ error }),
+      setSearchQuery: (query) => set({ searchQuery: query }),
+      setCurrentView: (view) => set({ currentView: view }),
+      setMonoRepoPath: (path) => set({ monoRepoPath: path }),
+      resetMonoRepoPath: () => set({ monoRepoPath: '' }),
+      setSelectedFolder: (folder) => set({ selectedFolder: folder }),
+      setError: (error) => set({ error }),
     }),
     {
       name: 'mono-repo-storage',

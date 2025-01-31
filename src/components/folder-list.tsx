@@ -17,6 +17,7 @@ interface FolderListProps {
   children?: ReactNode;
   handleGenerateDoc?: (folder: FolderItem) => void;
   icon: LucideIcon; // Lucide icon tipini belirtiyoruz
+  selectedFolder: any
 }
 
 const FolderList: React.FC<FolderListProps> = ({
@@ -25,6 +26,7 @@ const FolderList: React.FC<FolderListProps> = ({
   handleGenerateDoc,
   children,
   icon: Icon, // Destructuring yaparken rename ediyoruz
+  selectedFolder
 }) => {
   const { searchQuery } = useStore();
   const filteredFolders = folders.filter(folder =>
@@ -75,7 +77,7 @@ const FolderList: React.FC<FolderListProps> = ({
           className="mb-2 border border-transparent"
           onClick={() => onClick?.(folder)}
         >
-          <div className={`flex items-center justify-between gap-2 w-full p-2 hover:bg-muted rounded-lg ${folder.isSelected ? 'bg-accent' : ''
+          <div className={`flex items-center justify-between gap-2 w-full p-2 hover:bg-muted rounded-lg ${folder.name === selectedFolder ? 'bg-accent' : ''
             }`}>
             <div className="flex items-center">
               <Folder className="w-5 h-5 text-primary" />

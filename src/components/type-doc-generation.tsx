@@ -46,6 +46,7 @@ const TypeDocGeneration = () => {
         onClick={(folder) => useStore.setState({ selectedFolder: folder.name })}
         handleGenerateDoc={generateDocs}
         icon={FileText}
+        selectedFolder={selectedFolder}
       />
     </div>
   );
