@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { FileText } from "lucide-react";
 import useStore from '../store';
 import FolderList from './folder-list';
-import { useFolderLoader } from '@/hooks/useFolderLoader';
+import { useFolderLoader } from '@/hooks/useFolderWithType';
 import { useDocGenerator } from '@/hooks/useDocGenerator';
 import SubHeader from './sub-header';
 

@@ -3,8 +3,14 @@ import Layout from "@/layout";
 import Docs from "@/view/Docs"
 import Apps from "@/view/Apps"
 import GitHistory from "@/view/GitHistory"
+import { useFolderLoader } from "./hooks/useFolderWithType";
 
 function App() {
+  const init = () => {
+    useFolderLoader();
+  }
+
+  init();
   return (
     <Layout>
       <Routes>

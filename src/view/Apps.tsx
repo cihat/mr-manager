@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import FolderList from "@/components/folder-list";
 import useStore from "@/store";
 import { FolderItem } from "@/types";
@@ -29,7 +29,7 @@ const TerminalComponent = ({ currentFolder, monoRepoPath }: TerminalComponentPro
 
       if (command === 'ls') {
         const folders = await invoke('list_folders', { path });
-        term.writeln('\r\n' + folders.join('  '));
+        term.writeln('\r\n' + (folders as string[]).join('  '));
       }
       else if (command.startsWith('git ')) {
         const gitCommand = command.substring(4);
@@ -58,6 +58,9 @@ const TerminalComponent = ({ currentFolder, monoRepoPath }: TerminalComponentPro
         term.writeln('  git log     Show commit logs');
         term.writeln('  git refs    Show git references');
         term.writeln('  help        Show this help message');
+      }
+      else if (command === 'clear') {
+        term.clear();
       }
       else {
         term.writeln(`\r\nCommand not found: ${command}`);
@@ -88,6 +91,7 @@ const TerminalComponent = ({ currentFolder, monoRepoPath }: TerminalComponentPro
     xtermRef.current = term;
 
     term.writeln('Terminal initialized.');
+    term.writeln('Type "help" for available commands');
     term.writeln(currentFolder
       ? `Current directory: ${currentFolder}`
       : 'No folder selected. Please select a folder.');
