@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Folder, Type, Loader2, LucideIcon } from "lucide-react";
+import { Folder, Type, Loader2, LucideIcon, Star } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import useStore from '@/store';
@@ -9,6 +9,7 @@ interface FolderItem {
   isTypeScript: boolean;
   isLoading: boolean;
   isSelected: boolean;
+  isFavorite?: boolean;
 }
 
 interface FolderListProps {
@@ -16,8 +17,8 @@ interface FolderListProps {
   onClick?: (folder: FolderItem) => void;
   children?: ReactNode;
   handleGenerateDoc?: (folder: FolderItem) => void;
-  icon: LucideIcon; // Lucide icon tipini belirtiyoruz
-  selectedFolder: any
+  icon: LucideIcon;
+  selectedFolder: any;
   className?: string;
 }
 
@@ -26,11 +27,12 @@ const FolderList: React.FC<FolderListProps> = ({
   onClick,
   handleGenerateDoc,
   children,
-  icon: Icon, // Destructuring yaparken rename ediyoruz
+  icon: Icon,
   selectedFolder,
   className
 }) => {
-  const { searchQuery } = useStore();
+  const { searchQuery, toggleFavorite } = useStore();
+
   const filteredFolders = folders.filter(folder =>
     folder.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -71,16 +73,24 @@ const FolderList: React.FC<FolderListProps> = ({
     );
   }
 
+  // Sort folders with favorites first
+  const sortedFolders = [...filteredFolders].sort((a, b) => {
+    if (a.isFavorite && !b.isFavorite) return -1;
+    if (!a.isFavorite && b.isFavorite) return 1;
+    return 0;
+  });
+
   return (
     <ScrollArea className={`p-2 bg-background ${className}`}>
-      {filteredFolders.map((folder) => (
+      {sortedFolders.map((folder) => (
         <div
           key={folder.name}
           className="mb-2 border border-transparent"
           onClick={() => onClick?.(folder)}
         >
-          <div className={`flex items-center justify-between gap-2 w-full p-2 hover:bg-muted rounded-lg ${folder.name === selectedFolder ? 'bg-accent' : ''
-            }`}>
+          <div className={`flex items-center justify-between gap-2 w-full p-2 hover:bg-muted rounded-lg ${
+            folder.name === selectedFolder ? 'bg-accent' : ''
+          }`}>
             <div className="flex items-center">
               <Folder className="w-5 h-5 text-primary" />
               <span className="text-sm ml-2">{folder.name}</span>
@@ -88,17 +98,30 @@ const FolderList: React.FC<FolderListProps> = ({
                 <Type className="w-4 h-4 ml-2 text-primary" />
               )}
             </div>
-            {folder.isLoading ? (
-              <Loader2 className="w-6 h-6 text-primary animate-spin" />
-            ) : (
-              <Icon
-                className="text-primary min-w-[24px] min-h-[24px] bg-accent p-1 box-content rounded-lg hover:bg-accent/80 transition-colors"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleGenerateDoc?.(folder);
-                }}
-              />
-            )}
+            <div className="flex items-center gap-2">
+              {folder.isLoading ? (
+                <Loader2 className="w-6 h-6 text-primary animate-spin" />
+              ) : (
+                <>
+                  <Star
+                    className={`w-6 h-6 cursor-pointer ${
+                      folder.isFavorite ? 'text-yellow-400 fill-yellow-400' : 'text-muted-foreground'
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(folder.name);
+                    }}
+                  />
+                  <Icon
+                    className="text-primary min-w-[24px] min-h-[24px] bg-accent p-1 box-content rounded-lg hover:bg-accent/80 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleGenerateDoc?.(folder);
+                    }}
+                  />
+                </>
+              )}
+            </div>
           </div>
           {folder.isSelected && children}
         </div>

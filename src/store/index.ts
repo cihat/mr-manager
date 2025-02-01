@@ -6,6 +6,7 @@ export interface Folder {
   isTypeScript: boolean;
   isLoading: boolean;
   isSelected: boolean;
+  isFavorite?: boolean;
 }
 
 interface StoreState {
@@ -16,7 +17,8 @@ interface StoreState {
   searchQuery: string;
   currentGeneratedFolder: string;
   folders: Folder[];
-  docFolderName: string
+  docFolderName: string;
+  favorites: string[];
 }
 
 interface StoreActions {
@@ -30,6 +32,7 @@ interface StoreActions {
   resetMonoRepoPath: () => void;
   setSelectedFolder: (folder: string) => void;
   setFolders: (folders: Folder[]) => void;
+  toggleFavorite: (folderName: string) => void;
 }
 
 const initialState: StoreState = {
@@ -40,14 +43,14 @@ const initialState: StoreState = {
   searchQuery: '',
   currentGeneratedFolder: '',
   folders: [],
-  docFolderName: '.mr-manager'
+  docFolderName: '.mr-manager',
+  favorites: []
 };
 
 const useStore = create<StoreState & StoreActions>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...initialState,
-
       getLibsPath: (monoRepoPath) => {
         if (!monoRepoPath) return '';
         return `${monoRepoPath}/packages/libs`;
@@ -57,7 +60,26 @@ const useStore = create<StoreState & StoreActions>()(
         return `${monoRepoPath}/packages/apps`;
       },
       setFolders(folders) {
-        set({ folders });
+        const { favorites } = get();
+        const foldersWithFavorites = folders.map(folder => ({
+          ...folder,
+          isFavorite: favorites.includes(folder.name)
+        }));
+        set({ folders: foldersWithFavorites });
+      },
+      toggleFavorite: (folderName) => {
+        set((state) => {
+          const favorites = state.favorites.includes(folderName)
+            ? state.favorites.filter(name => name !== folderName)
+            : [...state.favorites, folderName];
+          
+          const updatedFolders = state.folders.map(folder => ({
+            ...folder,
+            isFavorite: favorites.includes(folder.name)
+          }));
+          
+          return { favorites, folders: updatedFolders };
+        });
       },
       setCurrentGeneratedFolder: (folderName) =>
         set({ currentGeneratedFolder: folderName }),
@@ -74,6 +96,7 @@ const useStore = create<StoreState & StoreActions>()(
         monoRepoPath: state.monoRepoPath,
         currentView: state.currentView,
         selectedFolder: state.selectedFolder,
+        favorites: state.favorites,
       }),
     }
   )
