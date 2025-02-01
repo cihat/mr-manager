@@ -10,7 +10,7 @@ const SubHeader = ({ title, icon, children }: SubHeaderProps) => (
   <div className="flex items-center p-2 bg-background">
     {/* <History className="w-8 h-8" /> */}
     <div className="flex items-center">
-      <DynamicIcon size="1.5rem" name={icon} className="mr-2" />
+      <DynamicIcon name={icon} className="mr-2" />
       <h3 className="font-semibold text-2xl">{title}</h3>
     </div>
     {children}

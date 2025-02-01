@@ -18,6 +18,7 @@ interface FolderListProps {
   handleGenerateDoc?: (folder: FolderItem) => void;
   icon: LucideIcon; // Lucide icon tipini belirtiyoruz
   selectedFolder: any
+  className?: string;
 }
 
 const FolderList: React.FC<FolderListProps> = ({
@@ -26,7 +27,8 @@ const FolderList: React.FC<FolderListProps> = ({
   handleGenerateDoc,
   children,
   icon: Icon, // Destructuring yaparken rename ediyoruz
-  selectedFolder
+  selectedFolder,
+  className
 }) => {
   const { searchQuery } = useStore();
   const filteredFolders = folders.filter(folder =>
@@ -70,7 +72,7 @@ const FolderList: React.FC<FolderListProps> = ({
   }
 
   return (
-    <ScrollArea className="p-2 bg-background">
+    <ScrollArea className={`p-2 bg-background ${className}`}>
       {filteredFolders.map((folder) => (
         <div
           key={folder.name}
