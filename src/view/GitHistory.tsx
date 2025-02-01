@@ -92,7 +92,17 @@ const LoadingSpinner = ({ message }: { message?: string }) => (
   </div>
 );
 
-const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick, onLoadMore, hasMore }: { loading: boolean, commits: BasicCommit[], selectedFolder: string, onCommitClick: (commit: BasicCommit) => void, onLoadMore: () => void, hasMore: boolean }) => {
+type CommitListSection = {
+  loading: boolean;
+  commits: BasicCommit[];
+  selectedFolder: string;
+  onCommitClick: (commit: BasicCommit) => void;
+  onLoadMore: () => void;
+  hasMore: boolean;
+};
+
+
+const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick, onLoadMore, hasMore }: CommitListSection) => {
   if (loading && commits.length === 0) {
     return <LoadingSpinner message="Loading commits..." />;
   }
@@ -121,7 +131,7 @@ const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick, on
   );
 };
 
-const GitHistory = ({ className }: { className?: string}) => {
+const GitHistory = ({ className }: { className?: string }) => {
   const {
     loading,
     detailsLoading,

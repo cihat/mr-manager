@@ -68,72 +68,68 @@ pub async fn list_folder_commits(
   let page = page.unwrap_or(1);
   let per_page = per_page.unwrap_or(20).max(1);
   let cache_key = format!(
-    "{}|{}|{}",
-    path,
-    branch.as_deref().unwrap_or(""),
-    remote.as_deref().unwrap_or("")
+      "{}|{}|{}",
+      path,
+      branch.as_deref().unwrap_or(""),
+      remote.as_deref().unwrap_or("")
   );
 
-  // Try to get from cache first
-  if let Some(cached) = COMMIT_CACHE.get(&cache_key) {
-    let start = (page - 1) * per_page;
-    return Ok(
+  // Get commits (either from cache or git)
+  let all_commits_arc = if let Some(cached) = COMMIT_CACHE.get(&cache_key) {
       cached
-        .get(start..)
-        .and_then(|s| s.get(..per_page))
-        .unwrap_or_default()
-        .to_vec(),
-    );
+  } else {
+      // Git command setup remains the same
+      let git_root = find_git_root(Path::new(&path)).ok_or("Could not find Git repository")?;
+      let relative_path = Path::new(&path)
+          .strip_prefix(&git_root)
+          .map_err(|_| "Failed to get relative path")?
+          .to_str()
+          .ok_or("Invalid path")?;
+
+      let mut cmd = Command::new("git");
+      cmd
+          .arg("-C")
+          .arg(&git_root)
+          .arg("log")
+          .arg("--format=%H%x00%an%x00%at%x00%B%x00<COMMIT>")
+          .arg("--")
+          .arg(relative_path);
+
+      if let Some(branch_name) = branch {
+          let ref_name = remote
+              .map(|r| format!("{}/{}", r, branch_name))
+              .unwrap_or(branch_name);
+          cmd.arg(ref_name);
+      }
+
+      let output = cmd
+          .output()
+          .map_err(|e| format!("Failed to execute git command: {}", e))?;
+
+      if !output.status.success() {
+          return Err(String::from_utf8_lossy(&output.stderr).to_string());
+      }
+
+      let output_str = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
+      let all_commits = parse_git_log_output(&output_str);
+      let commits_arc: Arc<[BasicCommit]> = Arc::from(all_commits.into_boxed_slice());
+      COMMIT_CACHE.insert(cache_key, commits_arc.clone());
+      commits_arc
+  };
+
+  // Improved pagination logic
+  let total_commits = all_commits_arc.len();
+  if total_commits == 0 {
+      return Ok(Vec::new());
   }
 
-  // Construct git log command
-  let git_root = find_git_root(Path::new(&path)).ok_or("Could not find Git repository")?;
-  let relative_path = Path::new(&path)
-    .strip_prefix(&git_root)
-    .map_err(|_| "Failed to get relative path")?
-    .to_str()
-    .ok_or("Invalid path")?;
-
-  let mut cmd = Command::new("git");
-  cmd
-    .arg("-C")
-    .arg(&git_root)
-    .arg("log")
-    .arg("--format=%H%x00%an%x00%at%x00%B%x00<COMMIT>") // Null-separated format
-    .arg("--")
-    .arg(relative_path);
-
-  if let Some(branch_name) = branch {
-    let ref_name = remote
-      .map(|r| format!("{}/{}", r, branch_name))
-      .unwrap_or(branch_name);
-    cmd.arg(ref_name);
-  }
-
-  let output = cmd
-    .output()
-    .map_err(|e| format!("Failed to execute git command: {}", e))?;
-
-  if !output.status.success() {
-    return Err(String::from_utf8_lossy(&output.stderr).to_string());
-  }
-
-  let output_str = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
-  let all_commits = parse_git_log_output(&output_str);
-  let all_commits_arc: Arc<[BasicCommit]> = Arc::from(all_commits.into_boxed_slice());
-
-  // Cache the results
-  COMMIT_CACHE.insert(cache_key, all_commits_arc.clone());
-
-  // Paginate results
   let start = (page - 1) * per_page;
-  Ok(
-    all_commits_arc
-      .get(start..)
-      .and_then(|s| s.get(..per_page))
-      .unwrap_or_default()
-      .to_vec(),
-  )
+  if start >= total_commits {
+      return Ok(Vec::new());
+  }
+
+  let end = (start + per_page).min(total_commits);
+  Ok(all_commits_arc[start..end].to_vec())
 }
 
 pub fn get_git_references(path: &str) -> Result<GitReferences, String> {

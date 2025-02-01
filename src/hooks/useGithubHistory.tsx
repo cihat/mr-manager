@@ -43,14 +43,15 @@ const useGitHistory = () => {
 
   useEffect(() => {
     setSearchQuery('');
+    setCommits([]);
 
-    const isExist = folders.find(folder => folder.name === selectedFolder);
-    if (selectedFolder && !isExist?.name) {
-      handleFolderClick({ name: selectedFolder });
-    } else {
-      setCommits([]);
-      searchQuery && setSearchQuery('');
-    }
+    // const isExist = folders.find(folder => folder.name === selectedFolder);
+    // if (selectedFolder && !isExist?.name) {
+    //   handleFolderClick({ name: selectedFolder });
+    // } else {
+    //   setCommits([]);
+    //   searchQuery && setSearchQuery('');
+    // }
   }, [currentView]);
 
 
