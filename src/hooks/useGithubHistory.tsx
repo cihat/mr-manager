@@ -49,7 +49,11 @@ const useGitHistory = () => {
 
   useEffect(() => {
     setSearchQuery('');
-  }, [selectedFolder]);
+
+    if (selectedFolder) {
+      handleFolderClick({ name: selectedFolder });
+    }
+  }, [currentView]);
 
 
   const handleListReferences = async () => {
