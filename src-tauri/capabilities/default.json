@@ -51,6 +51,7 @@
     "fs:default",
     "dialog:default",
     "os:default",
+    "log:default",
     "log:default"
   ]
 }
