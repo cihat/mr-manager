@@ -2,7 +2,7 @@ import { DiffEditor } from '@monaco-editor/react';
 import { useEffect, useRef, useState } from 'react';
 import type { DiffOnMount } from '@monaco-editor/react';
 import { Button } from '../ui/button';
-import { Backpack, CircleArrowLeft, CircleArrowRight } from 'lucide-react';
+import { CircleArrowLeft, CircleArrowRight } from 'lucide-react';
 
 interface DiffViewerProps {
   oldContent: string;
