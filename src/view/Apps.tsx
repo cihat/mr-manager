@@ -166,7 +166,7 @@ const TerminalComponent = ({ currentFolder, monoRepoPath }: TerminalComponentPro
           )}
         </span>
       </div>
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto scrollbar-hide">
         <div ref={terminalRef} className="h-full w-full" />
       </div>
     </div>
@@ -181,10 +181,10 @@ const Apps = () => {
   };
 
   return (
-    <Card className=" flex">
-      <div className=" flex-shrink-0 border-r border-gray-200 dark:border-gray-800 overflow-auto">
+    <Card className="flex">
+      <div className=" flex-shrink-0 border-r border-gray-200 dark:border-gray-800 overflow-auto scrollbar-hide">
         <FolderList
-          className="max-h-[calc(100vh-64px)] overflow-auto"
+          className="max-h-[calc(100vh-64px)] overflow-auto scrollbar-hide"
           folders={folders}
           onClick={onFolderClick}
           icon={TimerReset}
@@ -192,7 +192,7 @@ const Apps = () => {
         />
       </div>
 
-      <div className="flex-1 p-4 overflow-auto max-max-h-[calc(100vh-64px)]">
+      <div className="flex-1 p-4 overflow-auto max-max-h-[calc(100vh-64px)] scrollbar-hide">
         <TerminalComponent
           currentFolder={selectedFolder}
           monoRepoPath={monoRepoPath}

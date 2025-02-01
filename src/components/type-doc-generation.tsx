@@ -32,7 +32,7 @@ const TypeDocGeneration = () => {
   }, [folders, _folders, loadingFolder, selectedFolder]);
 
   return (
-    <div className="max-h-[calc(100vh-64px)] cursor-pointer overflow-scroll min-w-[330px]">
+    <div className="max-h-[calc(100vh-64px)] cursor-pointer overflow-scroll scrollbar-hide">
       <SubHeader title="Docs" icon="library" />
       <FolderList
         folders={enrichedFolders}

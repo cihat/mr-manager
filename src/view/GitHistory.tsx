@@ -171,7 +171,7 @@ const GitHistory = ({ className }: { className?: string }) => {
       </SubHeader>
 
       <div className="grid grid-cols-4 h-[calc(100vh-8rem)]">
-        <div className="overflow-scroll max-h-[calc(100vh-136px)]">
+        <div className="overflow-scroll max-h-[calc(100vh-136px)] scrollbar-hide">
           <FolderList
             folders={folders}
             onClick={handleFolderClick}
@@ -180,7 +180,7 @@ const GitHistory = ({ className }: { className?: string }) => {
           />
         </div>
 
-        <div className="p-4 col-span-3 overflow-scroll max-h-[calc(100vh-136px)]">
+        <div className="p-4 col-span-3 overflow-scroll max-h-[calc(100vh-136px)] scrollbar-hide">
           <CommitListSection
             loading={loading}
             commits={commits}
