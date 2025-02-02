@@ -14,46 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
 import Fuse from 'fuse.js';
-
-// const BranchSelect = ({ branches = [], onValueChange: any  }) => {
-//   const [filter, setFilter] = useState('');
-
-//   const fuse = new Fuse(branches, {
-//     threshold: 0.3,
-//     distance: 100
-//   });
-
-//   const filteredBranches = filter
-//     ? fuse.search(filter).map(result => result.item)
-//     : branches;
-
-//   const displayBranches = filteredBranches.slice(0, 100);
-
-//   return (
-//     <Select defaultValue="master" onValueChange={onValueChange}>
-//       <SelectTrigger className="w-[120px]">
-//         <SelectValue placeholder="Branch" />
-//       </SelectTrigger>
-//       <SelectContent>
-//         <div className="p-2">
-//           <Input
-//             placeholder="Filter branches..."
-//             value={filter}
-//             onChange={(e) => setFilter(e.target.value)}
-//             className="mb-2"
-//           />
-//         </div>
-//         <div className="max-h-[300px] overflow-auto">
-//           {displayBranches.map(branch => (
-//             <SelectItem key={branch} value={branch}>{branch}</SelectItem>
-//           ))}
-//         </div>
-//       </SelectContent>
-//     </Select>
-//   );
-// };
 
 const RemoteSelect = ({ remotes = [], onValueChange }: { remotes: string[], onValueChange: (value: string) => void }) => (
   <Select defaultValue="upstream" onValueChange={onValueChange}>
@@ -168,7 +129,6 @@ const GitHistory = ({ className }: { className?: string }) => {
 
       <SubHeader title='History' icon='history'>
         <div className='ml-auto mr-5 flex gap-2'>
-          {/* <BranchSelect branches={branches} onValueChange={setBranch} /> */}
           <RemoteSelect remotes={remotes} onValueChange={setRemote} />
           <CommitSearchInput value={searchQuery} onChange={handleSearch} />
         </div>

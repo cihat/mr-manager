@@ -33,22 +33,6 @@ export interface GitHistoryProps {
   className?: string;
 }
 
-// Store types
-export interface GitHistoryStore {
-  monoRepoPath: string;
-  selectedFolder: string | null;
-  error: string;
-  currentView: 'libs' | 'apps';
-  getLibsPath: (monoRepoPath: string) => string;
-  getAppsPath: (monoRepoPath: string) => string;
-  setCurrentView: (view: 'libs' | 'apps') => void;
-  setError: (error: string) => void;
-  setMonoRepoPath: (path: string) => void;
-  resetMonoRepoPath: () => void;
-  setSelectedFolder: (folder: string | null) => void;
-}
-
-
 export interface BasicCommit {
   id: string;
   message: string;

@@ -110,7 +110,7 @@ const CommitDetails: React.FC<CommitDetailsProps> = ({ commit, repoPath }) => {
       </div>
 
       <div className="grid grid-cols-5 gap-4 h-[calc(100%-5rem)]">
-        <div className="col-span-1 space-y-2 overflow-y-auto pr-2">
+        <div className="col-span-1 space-y-2 overflow-y-auto pr-2 scrollbar-hide">
           <h4 className="text-sm font-medium mb-3 sticky top-0 bg-background py-2">
             Changes ({commit.changes.length})
           </h4>

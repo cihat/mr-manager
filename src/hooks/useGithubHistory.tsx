@@ -1,5 +1,4 @@
-import { ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
-import useGitHistoryStore from "@/store/gitHistory";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 import { invoke } from '@tauri-apps/api/core';
 import useAppStore from "@/store";
 import { BasicCommit, DetailedCommit } from "@/types";
@@ -22,43 +21,16 @@ const useGitHistory = () => {
   const [references, setReferences] = useState<string[]>([]);
   const perPage = 20;
 
-  const { monoRepoPath, selectedFolder, getLibsPath, getAppsPath, setSelectedFolder } = useGitHistoryStore();
-  const { currentView, folders, setFolders } = useAppStore();
-  const loadFolders = useCallback(async () => {
-    const basePath = currentView === "libs" ? getLibsPath(monoRepoPath) : getAppsPath(monoRepoPath);
-    try {
-      const result = await invoke<string[]>('list_folders', { path: basePath });
-      setFolders(result.map(name => ({ name, isTypeScript: false, isLoading: false, isSelected: false })));
-      setError('');
-    } catch (error) {
-      console.error('Failed to load folders:', error);
-      setError(`Failed to load folders: ${error instanceof Error ? error.message : error}`);
-      setFolders([]);
-    }
-  }, [currentView, monoRepoPath, getLibsPath, getAppsPath, setFolders]);
-
-  useEffect(() => {
-    loadFolders();
-  }, [loadFolders, monoRepoPath]);
+  const { monoRepoPath, currentView, folders, selectedFolder, getLibsPath, getAppsPath, setSelectedFolder } = useAppStore();
 
   useEffect(() => {
     setSearchQuery('');
     setCommits([]);
-
-    // const isExist = folders.find(folder => folder.name === selectedFolder);
-    // if (selectedFolder && !isExist?.name) {
-    //   handleFolderClick({ name: selectedFolder });
-    // } else {
-    //   setCommits([]);
-    //   searchQuery && setSearchQuery('');
-    // }
   }, [currentView]);
 
 
   const handleListReferences = async () => {
     try {
-      console.log('monoRepoPath >>', monoRepoPath)
-
       const refs = await invoke<string[]>('get_git_references', {
         path: monoRepoPath,
       });
@@ -94,9 +66,7 @@ const useGitHistory = () => {
       //time diff
       console.log('time diff >>', bitis - baslangic)
       const minutes = Math.floor((bitis - baslangic) / 60000);
-      const seconds = ((bitis - baslangic) % 60000) / 1000;
       console.log('minutes >>', minutes)
-      console.log('seconds >>', seconds)
 
       setCommits(commits);
 
