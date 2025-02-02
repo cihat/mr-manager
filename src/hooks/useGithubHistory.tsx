@@ -39,7 +39,7 @@ const useGitHistory = () => {
 
   useEffect(() => {
     loadFolders();
-  }, [loadFolders]);
+  }, [loadFolders, monoRepoPath]);
 
   useEffect(() => {
     setSearchQuery('');
@@ -118,7 +118,7 @@ const useGitHistory = () => {
         page: nextPage,
         per_page: perPage
       });
-      if (newCommits.length === 0) {
+      if (newCommits?.length === 0) {
         // No more commits to load
         return;
       }
@@ -176,7 +176,7 @@ const useGitHistory = () => {
     folders,
     selectedFolder,
     searchQuery,
-    hasMore: commits.length >= currentPage * perPage,
+    hasMore: commits?.length >= currentPage * perPage,
     handleFolderClick,
     handleCommitClick,
     setIsDetailsOpen,

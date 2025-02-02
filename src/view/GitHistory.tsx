@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import FolderList from "@/components/folder-list";
-import { Loader2, GitCommit as GitCommitIcon, TimerReset } from "lucide-react";
+import { Loader2, GitCommit as GitCommitIcon, TimerReset, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BasicCommit } from '@/types';
 import CommitList from '@/components/git-components/commit-list';
@@ -71,11 +71,15 @@ const RemoteSelect = ({ remotes = [], onValueChange }: { remotes: string[], onVa
 const CommitSearchInput = ({ value, onChange }: { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => (
   <Tooltip>
     <TooltipTrigger>
-      <Input
-        placeholder='Search author, message, id'
-        value={value}
-        onChange={onChange}
-      />
+      <div className="relative w-48">
+        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder='Search author, message, id'
+          value={value}
+          onChange={onChange}
+          className='pl-8'
+        />
+      </div>
     </TooltipTrigger>
     <TooltipContent sideOffset={5}>
       Search commits by message, author, commit id
@@ -103,11 +107,11 @@ type CommitListSection = {
 
 
 const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick, onLoadMore, hasMore }: CommitListSection) => {
-  if (loading && commits.length === 0) {
+  if (loading && commits?.length === 0) {
     return <LoadingSpinner message="Loading commits..." />;
   }
 
-  if (commits.length === 0) {
+  if (commits?.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
         <GitCommitIcon className="w-8 h-8 mb-2" />

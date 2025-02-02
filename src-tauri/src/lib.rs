@@ -127,7 +127,7 @@ async fn list_folder_commits(
   branch: Option<String>,
   remote: Option<String>,
 ) -> Result<Vec<git::BasicCommit>, String> {
-  git::list_folder_commits(path, page, per_page, branch, remote).await
+  git::list_folder_commits(path, page, per_page, branch, remote)
 }
 
 #[tauri::command]

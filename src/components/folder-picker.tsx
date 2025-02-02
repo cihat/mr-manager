@@ -6,8 +6,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 import { Button } from './ui/button';
 
 const FolderPicker = () => {
-  const setMonoRepoPath = useStore(state => state.setMonoRepoPath);
-  const monoRepoPath = useStore(state => state.monoRepoPath);
+  const { monoRepoPath, setMonoRepoPath } = useStore();
   const [error, setError] = useState('');
 
 
@@ -16,12 +15,9 @@ const FolderPicker = () => {
       const selected = await open({
         directory: true,
         multiple: false,
-        // defaultPath: ""
       });
 
       if (selected) {
-        console.log('selected >>', selected)
-
         setMonoRepoPath(selected);
         setError('');
       }

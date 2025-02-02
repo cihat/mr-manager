@@ -5,7 +5,7 @@ const CommitList: React.FC<{
   commits: BasicCommit[];
   onCommitClick: (commit: BasicCommit) => void;
 }> = ({ commits, onCommitClick }) => {
-  if (!commits.length) return null;
+  if (!commits?.length) return null;
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
