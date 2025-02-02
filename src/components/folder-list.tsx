@@ -85,7 +85,7 @@ const FolderList: React.FC<FolderListProps> = ({
       {sortedFolders.map((folder) => (
         <div
           key={folder.name}
-          className="mb-2 border border-transparent"
+          className="mb-2 border border-transparent cursor-pointer"
           onClick={() => onClick?.(folder)}
         >
           <div className={`flex items-center justify-between gap-2 w-full p-2 hover:bg-muted rounded-lg ${
