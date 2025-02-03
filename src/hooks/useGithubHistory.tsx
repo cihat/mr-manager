@@ -1,6 +1,8 @@
-import { ChangeEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
+
 import { invoke } from '@tauri-apps/api/core';
-import useAppStore from "@/store";
+import useAppStore, { NotificationSettings } from "@/store";
 import { BasicCommit, DetailedCommit } from "@/types";
 // @ts-ignore
 import FuzzySearch from 'fuzzy-search';
@@ -19,9 +21,11 @@ const useGitHistory = () => {
   const [branch, setBranch] = useState('master');
   const [remote, setRemote] = useState('origin');
   const [references, setReferences] = useState<string[]>([]);
+  const [lastCommitId, setLastCommitId] = useState<string | null>(null);
+  const checkInterval = useRef<number | null>(null);
   const perPage = 20;
 
-  const { monoRepoPath, currentView, folders, selectedFolder, getLibsPath, getAppsPath, setSelectedFolder } = useAppStore();
+  const { monoRepoPath, currentView, folders, selectedFolder, notificationSettings, updateNotificationSettings, getLibsPath, getAppsPath, setSelectedFolder } = useAppStore();
 
   useEffect(() => {
     setSearchQuery('');
@@ -44,6 +48,40 @@ const useGitHistory = () => {
   useEffect(() => {
     handleListReferences();
   }, []);
+
+  useEffect(() => {
+    if (!notificationSettings.isEnabled) {
+      if (checkInterval.current) {
+        clearInterval(checkInterval.current);
+        checkInterval.current = null;
+      }
+      return;
+    }
+
+    if (currentRepoPath && selectedFolder) {
+      // Clear existing interval
+      if (checkInterval.current) {
+        clearInterval(checkInterval.current);
+      }
+
+      // Set new interval based on settings
+      const intervalMs = notificationSettings.checkInterval * 60 * 1000;
+      checkInterval.current = setInterval(checkNewCommits, intervalMs);
+
+      // Initial check
+      checkNewCommits();
+
+      return () => {
+        if (checkInterval.current) {
+          clearInterval(checkInterval.current);
+        }
+      };
+    }
+  }, [currentRepoPath, selectedFolder, notificationSettings]);
+
+  const handleSettingsChange = (newSettings: NotificationSettings) => {
+    updateNotificationSettings(newSettings);
+  };
 
   const handleFolderClick = async (folder: any) => {
     setCurrentPage(1);
@@ -135,6 +173,61 @@ const useGitHistory = () => {
     setSearchQuery(e.target.value);
   };
 
+  const checkNewCommits = async () => {
+    if (!currentRepoPath || !selectedFolder) return;
+
+    // Notifications disabled ise kontrol etme
+    if (!notificationSettings.isEnabled) return;
+
+    // Seçili klasör monitör edilenler arasında değilse kontrol etme
+    if (!notificationSettings.monitoredFolders.includes(selectedFolder)) return;
+
+    try {
+      const newCommit: BasicCommit = await invoke('check_new_commits', {
+        path: currentRepoPath,
+        branch,
+        remote,
+        lastCommitId: lastCommitId
+      });
+
+      console.log('newCommit >>', newCommit)
+
+
+      if (newCommit) {
+        // Update last commit ID
+        setLastCommitId(newCommit.id);
+
+        // Send notification
+        const permissionGranted = await isPermissionGranted();
+        if (!permissionGranted) {
+          const permission = await requestPermission();
+          if (permission !== 'granted') return;
+        }
+
+        await sendNotification({
+          title: 'New Commit Detected',
+          body: `New commit in ${selectedFolder} by ${newCommit.author}\n${newCommit.message}`,
+        });
+
+        // Refresh commits list
+        const updatedCommits: BasicCommit[] = await invoke('list_folder_commits', {
+          path: currentRepoPath,
+          page: 1,
+          per_page: perPage,
+          branch,
+          remote
+        });
+
+        setCommits(updatedCommits);
+        setCurrentPage(1);
+      }
+    } catch (error) {
+      console.error('Failed to check for new commits:', error);
+      setError(`Failed to check for new commits: ${error instanceof Error ? error.message : error}`);
+    }
+  };
+
+
   return {
     loading,
     detailsLoading,
@@ -147,6 +240,10 @@ const useGitHistory = () => {
     selectedFolder,
     searchQuery,
     hasMore: commits?.length >= currentPage * perPage,
+    references,
+    notificationSettings,
+    setCommits,
+    setLoading,
     handleFolderClick,
     handleCommitClick,
     setIsDetailsOpen,
@@ -155,7 +252,7 @@ const useGitHistory = () => {
     loadMore,
     setBranch,
     setRemote,
-    references
+    handleSettingsChange
   };
 };
 

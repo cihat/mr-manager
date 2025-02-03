@@ -275,6 +275,7 @@ fn get_commit_details(repo_path: String, commit_id: String) -> Result<DetailedCo
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_notification::init())
     .invoke_handler(tauri::generate_handler![
       generate_docs,
       read_file,
@@ -283,7 +284,9 @@ pub fn run() {
       list_folder_commits,
       get_commit_details,
       get_commit_diff,
-      get_git_references
+      get_git_references,
+      git::check_new_commits,
+      git::clear_git_cache
     ]) // Combined into single handler
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())

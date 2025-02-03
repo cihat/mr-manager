@@ -9,6 +9,12 @@ export interface Folder {
   isFavorite?: boolean;
 }
 
+export interface NotificationSettings {
+  isEnabled: boolean;
+  checkInterval: number;
+  monitoredFolders: string[];
+}
+
 interface StoreState {
   monoRepoPath: string;
   selectedFolder: string | null;
@@ -19,6 +25,7 @@ interface StoreState {
   folders: Folder[];
   docFolderName: string;
   favorites: string[];
+  notificationSettings: NotificationSettings;
 }
 
 interface StoreActions {
@@ -33,6 +40,7 @@ interface StoreActions {
   setSelectedFolder: (folder: string) => void;
   setFolders: (folders: Folder[]) => void;
   toggleFavorite: (folderName: string) => void;
+  updateNotificationSettings: (settings: Partial<NotificationSettings>) => void;
 }
 
 const initialState: StoreState = {
@@ -44,7 +52,12 @@ const initialState: StoreState = {
   currentGeneratedFolder: '',
   folders: [],
   docFolderName: '.mr-manager',
-  favorites: []
+  favorites: [],
+  notificationSettings: {
+    isEnabled: true,
+    checkInterval: 15,
+    monitoredFolders: []
+  },
 };
 
 const useStore = create<StoreState & StoreActions>()(
@@ -72,12 +85,12 @@ const useStore = create<StoreState & StoreActions>()(
           const favorites = state.favorites.includes(folderName)
             ? state.favorites.filter(name => name !== folderName)
             : [...state.favorites, folderName];
-          
+
           const updatedFolders = state.folders.map(folder => ({
             ...folder,
             isFavorite: favorites.includes(folder.name)
           }));
-          
+
           return { favorites, folders: updatedFolders };
         });
       },
@@ -89,6 +102,13 @@ const useStore = create<StoreState & StoreActions>()(
       resetMonoRepoPath: () => set({ monoRepoPath: '' }),
       setSelectedFolder: (folder) => set({ selectedFolder: folder }),
       setError: (error) => set({ error }),
+      updateNotificationSettings: (settings: Partial<NotificationSettings>) =>
+        set((state) => ({
+          notificationSettings: {
+            ...state.notificationSettings,
+            ...settings
+          }
+        }))
     }),
     {
       name: 'mono-repo-storage',

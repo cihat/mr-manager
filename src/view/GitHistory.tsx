@@ -15,6 +15,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Fuse from 'fuse.js';
+import NotificationSettings from '@/components/git-components/notification-settings';
+import ReloadButton from '@/components/git-components/reload-button';
 
 const RemoteSelect = ({ remotes = [], onValueChange }: { remotes: string[], onValueChange: (value: string) => void }) => (
   <Select defaultValue="upstream" onValueChange={onValueChange}>
@@ -116,7 +118,9 @@ const GitHistory = ({ className }: { className?: string }) => {
     hasMore,
     setRemote,
     setBranch,
-    references: { branches, remotes }
+    references: { branches, remotes },
+    notificationSettings,
+    handleSettingsChange
   } = useGitHistory();
 
   return (
@@ -131,6 +135,13 @@ const GitHistory = ({ className }: { className?: string }) => {
         <div className='ml-auto mr-5 flex gap-2'>
           <RemoteSelect remotes={remotes} onValueChange={setRemote} />
           <CommitSearchInput value={searchQuery} onChange={handleSearch} />
+          <ReloadButton />
+          <NotificationSettings
+            folders={folders}
+            onSettingsChange={handleSettingsChange}
+            defaultInterval={notificationSettings.checkInterval}
+            defaultEnabledFolders={notificationSettings.monitoredFolders}
+          />
         </div>
       </SubHeader>
 

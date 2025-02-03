@@ -15,10 +15,12 @@ pub struct BasicCommit {
   pub date: i64,
 }
 
-const CACHE_TTL: Duration = Duration::from_secs(600); static COMMIT_CACHE: Lazy<Cache<String, Arc<[BasicCommit]>>> = Lazy::new(|| {
+const CACHE_TTL: Duration = Duration::from_secs(600);
+static COMMIT_CACHE: Lazy<Cache<String, Arc<[BasicCommit]>>> = Lazy::new(|| {
   Cache::builder()
     .time_to_live(CACHE_TTL)
-    .initial_capacity(100)     .build()
+    .initial_capacity(100)
+    .build()
 });
 
 static GIT_ROOT_CACHE: Lazy<Cache<PathBuf, String>> = Lazy::new(|| {
@@ -54,15 +56,15 @@ pub fn find_git_root(start_path: &Path) -> Option<String> {
 }
 
 fn parse_git_log_output(output: &str) -> Vec<BasicCommit> {
-  let mut commits = Vec::with_capacity(32); 
+  let mut commits = Vec::with_capacity(32);
   for commit_block in output.split("\0<COMMIT>") {
-    let mut fields = commit_block.splitn(4, '\0'); 
+    let mut fields = commit_block.splitn(4, '\0');
     let id = match fields.next() {
       Some(s) if !s.is_empty() => s.trim(),
       _ => continue,
     };
 
-        let author = fields.next().map(str::trim).unwrap_or_default();
+    let author = fields.next().map(str::trim).unwrap_or_default();
     let date_str = fields.next().unwrap_or_default().trim();
     let message = fields.next().map(str::trim).unwrap_or_default();
 
@@ -88,7 +90,7 @@ pub fn list_folder_commits(
   let page = page.unwrap_or(1);
   let per_page = per_page.unwrap_or(20).max(1);
 
-    let cache_key = {
+  let cache_key = {
     let mut key = path.clone();
     if let Some(ref b) = branch {
       key.push('|');
@@ -101,7 +103,7 @@ pub fn list_folder_commits(
     key
   };
 
-    let all_commits_arc = if let Some(cached) = COMMIT_CACHE.get(&cache_key) {
+  let all_commits_arc = if let Some(cached) = COMMIT_CACHE.get(&cache_key) {
     cached
   } else {
     let git_root = find_git_root(Path::new(&path)).ok_or("Could not find Git repository")?;
@@ -113,14 +115,14 @@ pub fn list_folder_commits(
       .ok_or("Invalid path")?;
 
     let mut cmd = Command::new("git");
-    let mut cmd = cmd
+    let cmd = cmd
       .arg("-C")
       .arg(&git_root)
       .arg("log")
       .arg("--format=%H%x00%an%x00%at%x00%B%x00<COMMIT>")
       .arg("--");
 
-        if let Some(branch_name) = branch {
+    if let Some(branch_name) = branch {
       let ref_name = remote.map_or(Cow::Borrowed(&branch_name), |r| {
         Cow::Owned(format!("{}/{}", r, branch_name))
       });
@@ -144,7 +146,7 @@ pub fn list_folder_commits(
     commits_arc
   };
 
-    let start = (page.saturating_sub(1)) * per_page;
+  let start = (page.saturating_sub(1)) * per_page;
   if start >= all_commits_arc.len() {
     return Ok(Vec::new());
   }
@@ -154,7 +156,7 @@ pub fn list_folder_commits(
 }
 
 pub fn get_git_references(path: &str) -> Result<GitReferences, String> {
-    let remotes = Command::new("git")
+  let remotes = Command::new("git")
     .arg("-C")
     .arg(path)
     .arg("remote")
@@ -166,7 +168,7 @@ pub fn get_git_references(path: &str) -> Result<GitReferences, String> {
         .map_err(|e| e.to_string())
     })?;
 
-    let branches = vec![String::from("master")];
+  let branches = vec![String::from("master")];
 
   Ok(GitReferences { remotes, branches })
 }
@@ -175,4 +177,81 @@ pub fn get_git_references(path: &str) -> Result<GitReferences, String> {
 pub struct GitReferences {
   pub remotes: Vec<String>,
   pub branches: Vec<String>,
+}
+
+#[tauri::command]
+pub fn check_new_commits(
+  path: String,
+  branch: Option<String>,
+  remote: Option<String>,
+  last_commit_id: Option<String>,
+) -> Result<Option<BasicCommit>, String> {
+  let git_root = find_git_root(Path::new(&path)).ok_or("Could not find Git repository")?;
+
+  let mut cmd = Command::new("git");
+  cmd
+    .arg("-C")
+    .arg(&git_root)
+    .arg("fetch")
+    .arg(remote.as_deref().unwrap_or("origin"));
+
+  if let Err(e) = cmd.output() {
+    return Err(format!("Failed to fetch from remote: {}", e));
+  }
+
+  let mut log_cmd = Command::new("git");
+  let log_cmd = log_cmd
+    .arg("-C")
+    .arg(&git_root)
+    .arg("log")
+    .arg("-1") // Get only the latest commit
+    .arg("--format=%H%x00%an%x00%at%x00%B%x00<COMMIT>");
+
+  if let Some(branch_name) = branch {
+    let ref_name = remote.map_or(Cow::Borrowed(&branch_name), |r| {
+      Cow::Owned(format!("{}/{}", r, branch_name))
+    });
+    log_cmd.arg(&*ref_name);
+  }
+
+  let output = log_cmd
+    .output()
+    .map_err(|e| format!("Failed to execute git command: {}", e))?;
+
+  if !output.status.success() {
+    return Err(String::from_utf8_lossy(&output.stderr).to_string());
+  }
+
+  let output_str = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
+  let commits = parse_git_log_output(&output_str);
+
+  if let Some(latest_commit) = commits.first() {
+    // If we have a last_commit_id and it's different from the latest commit,
+    // return the new commit
+    if let Some(last_id) = last_commit_id {
+      if latest_commit.id != last_id {
+        return Ok(Some(latest_commit.clone()));
+      }
+    }
+  }
+
+  Ok(None)
+}
+
+#[tauri::command]
+pub fn clear_git_cache(path: Option<String>) -> Result<(), String> {
+  match path {
+    Some(specific_path) => {
+      // Belirli bir path için cache'i temizle
+      GIT_ROOT_CACHE.remove(&PathBuf::from(specific_path.clone()));
+      COMMIT_CACHE.remove(&specific_path);
+      Ok(())
+    }
+    None => {
+      // Tüm cache'i temizle
+      GIT_ROOT_CACHE.invalidate_all();
+      COMMIT_CACHE.invalidate_all();
+      Ok(())
+    }
+  }
 }
