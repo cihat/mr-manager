@@ -1,9 +1,9 @@
 //@ts-nocheck
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import FolderList from "@/components/folder-list";
-import { Loader2, GitCommit as GitCommitIcon, TimerReset, Search } from "lucide-react";
+import { Loader2, GitCommit as GitCommitIcon, TimerReset, Search, RefreshCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BasicCommit } from '@/types';
 import CommitList from '@/components/git-components/commit-list';
@@ -15,21 +15,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import Fuse from 'fuse.js';
-// import NotificationSettings from '@/components/git-components/notification-settings';
+import NotificationSettings from '@/components/git-components/notification-settings';
 import ReloadButton from '@/components/git-components/reload-button';
-
-const RemoteSelect = ({ remotes = [], onValueChange }: { remotes: string[], onValueChange: (value: string) => void }) => (
-  <Select defaultValue="upstream" onValueChange={onValueChange}>
-    <SelectTrigger className="w-[120px]">
-      <SelectValue placeholder="Origin" />
-    </SelectTrigger>
-    <SelectContent>
-      {remotes.map((remote: string) => (
-        <SelectItem key={remote} value={remote}>{remote}</SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-);
 
 const CommitSearchInput = ({ value, onChange }: { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => (
   <Tooltip>
@@ -69,8 +56,8 @@ type CommitListSection = {
 };
 
 
-const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick, onLoadMore, hasMore }: CommitListSection) => {
-  if (loading && commits?.length === 0) {
+const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick }: CommitListSection) => {
+  if (loading || commits?.length === 0) {
     return <LoadingSpinner message="Loading commits..." />;
   }
 
@@ -78,24 +65,12 @@ const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick, on
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
         <GitCommitIcon className="w-8 h-8 mb-2" />
-        <p>{selectedFolder ? 'No commits found' : 'Select a folder to view commits'}</p>
+        <p>{selectedFolder ? 'No new commits found' : 'Select a folder to view new commits'}</p>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <CommitList commits={commits} onCommitClick={onCommitClick} />
-      {hasMore && (
-        <div className="flex justify-center">
-          <Button variant="outline" onClick={onLoadMore} disabled={loading}>
-            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            {loading ? 'Loading...' : 'Load More'}
-          </Button>
-        </div>
-      )}
-    </div>
-  );
+  return <CommitList commits={commits} onCommitClick={onCommitClick} />;
 };
 
 const GitHistory = ({ className }: { className?: string }) => {
@@ -109,8 +84,8 @@ const GitHistory = ({ className }: { className?: string }) => {
     currentRepoPath,
     folders,
     selectedFolder,
-    handleFolderClick,
-    handleCommitClick,
+    handleFolderClickForNewCommits,
+    handleCommitClickForNew,
     setIsDetailsOpen,
     searchQuery,
     handleSearch,
@@ -122,6 +97,12 @@ const GitHistory = ({ className }: { className?: string }) => {
     notificationSettings,
     handleSettingsChange
   } = useGitHistory();
+  const [refreshing, setRefreshing] = useState(false);
+
+
+  useEffect(() => {
+    handleFolderClickForNewCommits(selectedFolder);
+  }, [refreshing])
 
   return (
     <div className={cn("", className)}>
@@ -131,36 +112,34 @@ const GitHistory = ({ className }: { className?: string }) => {
         </Alert>
       )}
 
-      <SubHeader title='History' icon='history'>
+      <SubHeader title='Track' icon='view'>
         <div className='ml-auto mr-5 flex gap-2'>
-          <RemoteSelect remotes={remotes} onValueChange={setRemote} />
           <CommitSearchInput value={searchQuery} onChange={handleSearch} />
-          <ReloadButton />
-          {/* <NotificationSettings
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setRefreshing(!refreshing)}
+            disabled={loading}
+            className={className}
+          >
+            <RefreshCcw className={`h-4 w-4 ${(loading) ? 'animate-spin' : ''}`} />
+          </Button>
+          <NotificationSettings
             folders={folders}
             onSettingsChange={handleSettingsChange}
             defaultInterval={notificationSettings.checkInterval}
             defaultEnabledFolders={notificationSettings.monitoredFolders}
-          /> */}
+          />
         </div>
       </SubHeader>
 
       <div className="grid grid-cols-4 h-[calc(100vh-8rem)]">
-        <div className="overflow-scroll max-h-[calc(100vh-136px)] scrollbar-hide">
-          <FolderList
-            folders={folders}
-            onClick={handleFolderClick}
-            icon={TimerReset}
-            selectedFolder={selectedFolder}
-          />
-        </div>
-
-        <div className="p-4 col-span-3 overflow-scroll max-h-[calc(100vh-136px)] scrollbar-hide">
+        <div className="p-4 col-span-4 overflow-scroll max-h-[calc(100vh-136px)] scrollbar-hide">
           <CommitListSection
             loading={loading}
             commits={commits}
             selectedFolder={selectedFolder}
-            onCommitClick={handleCommitClick}
+            onCommitClick={handleCommitClickForNew}
             onLoadMore={loadMore}
             hasMore={hasMore}
           />

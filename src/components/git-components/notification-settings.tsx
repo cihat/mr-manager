@@ -1,7 +1,5 @@
-//@ts-nocheck
-
-import React, { useState, useEffect } from 'react';
-import { Bell, Settings2, FolderGit2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Bell, Settings2, FolderGit2, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import Fuse from 'fuse.js';
 import {
   Select,
   SelectContent,
@@ -18,6 +17,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { NotificationSettings } from '@/store';
+import useStore from "@/store";
+import { ToggleGroup, ToggleGroupItem } from '@radix-ui/react-toggle-group';
+import CommitMonitor from './commit-monitor';
 
 interface NotificationSettingsProps {
   folders?: { name: string }[];
@@ -34,8 +36,23 @@ const NotificationSettings = ({
 }: NotificationSettingsProps) => {
   const [isEnabled, setIsEnabled] = useState(true);
   const [checkInterval, setCheckInterval] = useState(defaultInterval);
-  const [selectedFolders, setSelectedFolders] = useState(new Set(defaultEnabledFolders));
+  const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set(defaultEnabledFolders));
+  const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState('');
+  const { currentView, setCurrentView, monoRepoPath } = useStore();
+
+  // Initialize Fuse instance for fuzzy search
+  const fuse = useMemo(() => new Fuse(folders, {
+    keys: ['name'],
+    threshold: 0.3,
+    shouldSort: true
+  }), [folders]);
+
+  // Filter folders based on search query
+  const filteredFolders = useMemo(() => {
+    if (!searchQuery) return folders;
+    return fuse.search(searchQuery).map(result => result.item);
+  }, [searchQuery, folders, fuse]);
 
   // Interval presets for dropdown
   const intervalPresets = [
@@ -157,13 +174,36 @@ const NotificationSettings = ({
           {/* Folder selection */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Monitored Folders</CardTitle>
-              <CardDescription>Select folders to monitor for new commits</CardDescription>
+              <div className='flex justify-between w-full'>
+                <div>
+                  <CardTitle className="text-lg">Monitored Folders</CardTitle>
+                  <CardDescription>Select folders to monitor for new commits</CardDescription>
+                </div>
+                <ToggleGroup
+                  type="single"
+                  value={currentView}
+                  onValueChange={(value: 'libs' | 'apps') => value && setCurrentView(value)}
+                >
+                  <ToggleGroupItem value="libs" className="w-24">Libs</ToggleGroupItem>
+                  <ToggleGroupItem value="apps" className="w-24">Apps</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
             </CardHeader>
             <CardContent>
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search folders..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+              </div>
               <ScrollArea className="h-64 rounded-md border">
                 <div className="p-4 space-y-2">
-                  {folders.map(folder => (
+                  {filteredFolders.map(folder => (
                     <div key={folder.name} className="flex items-center gap-2 p-2 hover:bg-accent rounded-lg">
                       <Switch
                         id={`folder-${folder.name}`}
@@ -176,12 +216,23 @@ const NotificationSettings = ({
                       </Label>
                     </div>
                   ))}
+                  {filteredFolders.length === 0 && (
+                    <div className="text-center text-muted-foreground py-4">
+                      No folders found matching your search
+                    </div>
+                  )}
                 </div>
               </ScrollArea>
             </CardContent>
           </Card>
         </div>
       </DialogContent>
+      <CommitMonitor
+        selectedFolders={Array.from(selectedFolders)}
+        checkInterval={checkInterval}
+        isEnabled={isEnabled}
+        monoRepoPath={monoRepoPath}
+      />
     </Dialog>
   );
 };

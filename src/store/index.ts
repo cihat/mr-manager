@@ -117,6 +117,7 @@ const useStore = create<StoreState & StoreActions>()(
         currentView: state.currentView,
         selectedFolder: state.selectedFolder,
         favorites: state.favorites,
+        notificationSettings: state.notificationSettings
       }),
     }
   )

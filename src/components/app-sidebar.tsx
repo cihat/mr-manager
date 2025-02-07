@@ -1,4 +1,4 @@
-import { BookMarked,  History, Command } from "lucide-react"
+import { BookMarked, History, Command, ViewIcon } from "lucide-react"
 import { Link, useLocation } from "react-router"
 import {
   Sidebar,
@@ -11,22 +11,31 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-const items = [
+export const items = [
   {
     title: "Bash",
     url: "/bash",
     icon: Command,
-    isComingSoon: true
+    isComingSoon: true,
+    hasFolderPicker: true,
   },
   {
     title: "Docs",
     url: "/docs",
-    icon: BookMarked
+    icon: BookMarked,
+    hasFolderPicker: true,
   },
   {
     title: "History",
     url: "/history",
-    icon: History
+    icon: History,
+    hasFolderPicker: true,
+  },
+  {
+    title: "Track",
+    url: "/track",
+    icon: ViewIcon,
+    hasFolderPicker: false,
   },
 ]
 
@@ -53,7 +62,7 @@ export function AppSidebar() {
                         <span className="text-xs text-gray-400 ml-auto">Coming Soon</span>
                       )}
                     </Link>
-                    
+
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

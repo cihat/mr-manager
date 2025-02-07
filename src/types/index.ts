@@ -44,3 +44,13 @@ export interface BasicCommit {
 export interface DetailedCommit extends BasicCommit {
   changes: GitChange[];
 }
+
+export type NotificationSettings = {
+
+  isEnabled: boolean;
+
+  checkInterval: number;
+
+  selectedFolders: string[];
+
+};

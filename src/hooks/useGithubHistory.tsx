@@ -19,9 +19,8 @@ const useGitHistory = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [branch, setBranch] = useState('master');
-  const [remote, setRemote] = useState('origin');
+  const [remote, setRemote] = useState('upstream');
   const [references, setReferences] = useState<string[]>([]);
-  const [lastCommitId, setLastCommitId] = useState<string | null>(null);
   const checkInterval = useRef<number | null>(null);
   const perPage = 20;
 
@@ -117,6 +116,29 @@ const useGitHistory = () => {
     }
   };
 
+  const handleFolderClickForNewCommits = async () => {
+    setCurrentPage(1);
+    setLoading(true);
+    setCommits([]);
+    setCurrentRepoPath(monoRepoPath)
+
+    try {
+      const newCommits = await invoke<BasicCommit[]>('get_new_commits', {
+        path: monoRepoPath,
+        remote,
+        branch
+      });
+
+      setCommits(newCommits);
+      setError('');
+    } catch (error) {
+      console.error('Failed to load commits:', error);
+      setError(`Failed to load commits: ${error instanceof Error ? error.message : error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loadMore = async () => {
     setLoading(true);
     try {
@@ -158,6 +180,23 @@ const useGitHistory = () => {
     }
   };
 
+  const handleCommitClickForNew = async (commit: BasicCommit) => {
+    setDetailsLoading(true);
+    try {
+      const details = await invoke<DetailedCommit>('get_new_commits_details', {
+        repoPath: currentRepoPath,
+        commitId: commit.id,
+      });
+      setSelectedCommit(details);
+      setIsDetailsOpen(true);
+    } catch (error) {
+      console.error('Failed to load commit details:', error);
+      setError(`Failed to load commit details: ${error instanceof Error ? error.message : error}`);
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
   const searchedCommits = useMemo(() => {
     if (!searchQuery) return commits;
 
@@ -176,50 +215,35 @@ const useGitHistory = () => {
   const checkNewCommits = async () => {
     if (!currentRepoPath || !selectedFolder) return;
 
-    // Notifications disabled ise kontrol etme
-    if (!notificationSettings.isEnabled) return;
-
-    // Seçili klasör monitör edilenler arasında değilse kontrol etme
-    if (!notificationSettings.monitoredFolders.includes(selectedFolder)) return;
+    if (!notificationSettings.isEnabled ||
+      !notificationSettings.monitoredFolders.includes(selectedFolder)) {
+      return;
+    }
 
     try {
-      const newCommit: BasicCommit = await invoke('check_new_commits', {
+      const newCommits: BasicCommit[] = await invoke('get_new_commits', {
         path: currentRepoPath,
-        branch,
-        remote,
-        lastCommitId: lastCommitId
+        remote: remote,
+        branch: branch
       });
 
-      console.log('newCommit >>', newCommit)
-
-
-      if (newCommit) {
-        // Update last commit ID
-        setLastCommitId(newCommit.id);
-
-        // Send notification
+      if (newCommits && newCommits.length > 0) {
+        // Send notification for each new commit
         const permissionGranted = await isPermissionGranted();
         if (!permissionGranted) {
           const permission = await requestPermission();
           if (permission !== 'granted') return;
         }
 
-        await sendNotification({
-          title: 'New Commit Detected',
-          body: `New commit in ${selectedFolder} by ${newCommit.author}\n${newCommit.message}`,
-        });
+        for (const commit of newCommits) {
+          await sendNotification({
+            title: `New Commit in ${selectedFolder}`,
+            body: `Author: ${commit.author}\n${commit.message}`
+          });
+        }
 
-        // Refresh commits list
-        const updatedCommits: BasicCommit[] = await invoke('list_folder_commits', {
-          path: currentRepoPath,
-          page: 1,
-          per_page: perPage,
-          branch,
-          remote
-        });
-
-        setCommits(updatedCommits);
-        setCurrentPage(1);
+        // Update commits list with new commits at the top
+        setCommits(prevCommits => [...newCommits, ...prevCommits]);
       }
     } catch (error) {
       console.error('Failed to check for new commits:', error);
@@ -246,13 +270,15 @@ const useGitHistory = () => {
     setLoading,
     handleFolderClick,
     handleCommitClick,
+    handleCommitClickForNew,
     setIsDetailsOpen,
     setError,
     handleSearch,
     loadMore,
     setBranch,
     setRemote,
-    handleSettingsChange
+    handleSettingsChange,
+    handleFolderClickForNewCommits
   };
 };
 

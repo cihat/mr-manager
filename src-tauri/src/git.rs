@@ -24,7 +24,7 @@ static COMMIT_CACHE: Lazy<Cache<String, Arc<[BasicCommit]>>> = Lazy::new(|| {
 });
 
 // Add a new cache for tracking last fetch times per remote
-static LAST_FETCH_CACHE: Lazy<Cache<String, i64>> = Lazy::new(|| {
+pub static LAST_FETCH_CACHE: Lazy<Cache<String, i64>> = Lazy::new(|| {
   Cache::builder()
     .time_to_live(Duration::from_secs(3600))
     .initial_capacity(10)
@@ -250,61 +250,94 @@ pub struct GitReferences {
   pub branches: Vec<String>,
 }
 
+// #[tauri::command]
+// pub fn check_new_commits(
+//   path: String,
+//   branch: Option<String>,
+//   remote: Option<String>,
+//   last_commit_id: Option<String>,
+// ) -> Result<Option<BasicCommit>, String> {
+//   let git_root = find_git_root(Path::new(&path)).ok_or("Could not find Git repository")?;
+
+//   let mut cmd = Command::new("git");
+//   cmd
+//     .arg("-C")
+//     .arg(&git_root)
+//     .arg("fetch")
+//     .arg(remote.as_deref().unwrap_or("upstream"));
+
+//   if let Err(e) = cmd.output() {
+//     return Err(format!("Failed to fetch from remote: {}", e));
+//   }
+
+//   let mut log_cmd = Command::new("git");
+//   let log_cmd = log_cmd
+//     .arg("-C")
+//     .arg(&git_root)
+//     .arg("log")
+//     .arg("-1") // Get only the latest commit
+//     .arg("--format=%H%x00%an%x00%at%x00%B%x00<COMMIT>");
+
+//   if let Some(branch_name) = branch {
+//     let ref_name = remote.map_or(Cow::Borrowed(&branch_name), |r| {
+//       Cow::Owned(format!("{}/{}", r, branch_name))
+//     });
+//     log_cmd.arg(&*ref_name);
+//   }
+
+//   let output = log_cmd
+//     .output()
+//     .map_err(|e| format!("Failed to execute git command: {}", e))?;
+
+//   if !output.status.success() {
+//     return Err(String::from_utf8_lossy(&output.stderr).to_string());
+//   }
+
+//   let output_str = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
+//   let commits = parse_git_log_output(&output_str);
+
+//   if let Some(latest_commit) = commits.first() {
+//     // If we have a last_commit_id and it's different from the latest commit,
+//     // return the new commit
+//     if let Some(last_id) = last_commit_id {
+//       if latest_commit.id != last_id {
+//         return Ok(Some(latest_commit.clone()));
+//       }
+//     }
+//   }
+
+//   Ok(None)
+// }
+
 #[tauri::command]
-pub fn check_new_commits(
+pub fn get_new_commits(
   path: String,
-  branch: Option<String>,
-  remote: Option<String>,
-  last_commit_id: Option<String>,
-) -> Result<Option<BasicCommit>, String> {
+  remote: String,
+  branch: String,
+) -> Result<Vec<BasicCommit>, String> {
   let git_root = find_git_root(Path::new(&path)).ok_or("Could not find Git repository")?;
 
-  let mut cmd = Command::new("git");
-  cmd
+  // Fetch from remote to get latest updates
+  fetch_from_remote(&git_root, &remote)?;
+
+  // Get commits that are in remote/branch but not in HEAD
+  let output = Command::new("git")
     .arg("-C")
     .arg(&git_root)
-    .arg("fetch")
-    .arg(remote.as_deref().unwrap_or("upstream"));
-
-  if let Err(e) = cmd.output() {
-    return Err(format!("Failed to fetch from remote: {}", e));
-  }
-
-  let mut log_cmd = Command::new("git");
-  let log_cmd = log_cmd
-    .arg("-C")
-    .arg(&git_root)
-    .arg("log")
-    .arg("-1") // Get only the latest commit
-    .arg("--format=%H%x00%an%x00%at%x00%B%x00<COMMIT>");
-
-  if let Some(branch_name) = branch {
-    let ref_name = remote.map_or(Cow::Borrowed(&branch_name), |r| {
-      Cow::Owned(format!("{}/{}", r, branch_name))
-    });
-    log_cmd.arg(&*ref_name);
-  }
-
-  let output = log_cmd
+    .args([
+      "log",
+      "--format=%H%x00%an%x00%at%x00%B%x00<COMMIT>",
+      "--right-only",
+      "--cherry-pick",
+      &format!("HEAD...{}/{}", remote, branch),
+    ])
     .output()
-    .map_err(|e| format!("Failed to execute git command: {}", e))?;
+    .map_err(|e| format!("Failed to get commits: {}", e))?;
 
   if !output.status.success() {
     return Err(String::from_utf8_lossy(&output.stderr).to_string());
   }
 
   let output_str = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
-  let commits = parse_git_log_output(&output_str);
-
-  if let Some(latest_commit) = commits.first() {
-    // If we have a last_commit_id and it's different from the latest commit,
-    // return the new commit
-    if let Some(last_id) = last_commit_id {
-      if latest_commit.id != last_id {
-        return Ok(Some(latest_commit.clone()));
-      }
-    }
-  }
-
-  Ok(None)
+  Ok(parse_git_log_output(&output_str))
 }

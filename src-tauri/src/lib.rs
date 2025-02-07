@@ -1,8 +1,11 @@
 mod git;
-use git::GitReferences;
+use git::{GitReferences, LAST_FETCH_CACHE};
 use git2::{DiffOptions, Oid, Repository};
 use serde::Serialize;
-use std::path::{Path, PathBuf};
+use std::{
+  path::{Path, PathBuf},
+  process::Command,
+};
 
 #[tauri::command]
 async fn generate_docs(path: String) -> Result<String, String> {
@@ -272,6 +275,85 @@ fn get_commit_details(repo_path: String, commit_id: String) -> Result<DetailedCo
   Ok(detailed_commit)
 }
 
+#[tauri::command]
+fn get_new_commits_details(repo_path: String, commit_id: String) -> Result<DetailedCommit, String> {
+  let path = Path::new(&repo_path);
+  let git_root = find_git_root(path).ok_or_else(|| "Could not find Git repository".to_string())?;
+
+  // Fetch commit object using git command since it may not exist locally
+  let output = Command::new("git")
+    .arg("-C")
+    .arg(&git_root)
+    .args([
+      "show",
+      "--format=%H%n%an%n%at%n%B",
+      "--name-status",
+      commit_id.as_str(),
+    ])
+    .output()
+    .map_err(|e| format!("Failed to get commit: {}", e))?;
+
+  if !output.status.success() {
+    return Err(String::from_utf8_lossy(&output.stderr).to_string());
+  }
+
+  let output_str = String::from_utf8(output.stdout).map_err(|e| e.to_string())?;
+  let mut lines = output_str.lines();
+
+  // Parse commit details
+  let id = lines.next().ok_or("Missing commit hash")?.to_string();
+  let author = lines.next().ok_or("Missing author")?.to_string();
+  let date = lines
+    .next()
+    .ok_or("Missing date")?
+    .parse::<i64>()
+    .map_err(|e| format!("Invalid date: {}", e))?;
+
+  // Get commit message until blank line
+  let mut message = String::new();
+  while let Some(line) = lines.next() {
+    if line.is_empty() {
+      break;
+    }
+    message.push_str(line);
+    message.push('\n');
+  }
+
+  // Parse file changes
+  let mut changes = Vec::new();
+  while let Some(line) = lines.next() {
+    if line.is_empty() {
+      continue;
+    }
+
+    let mut parts = line.split_whitespace();
+    let status = match parts.next() {
+      Some("A") => "Added",
+      Some("M") => "Modified",
+      Some("D") => "Deleted",
+      Some("R") => "Renamed",
+      Some("C") => "Copied",
+      Some("T") => "Type Changed",
+      Some("U") => "Unmerged",
+      _ => continue,
+    };
+
+    if let Some(file) = parts.next() {
+      changes.push(GitChange {
+        status: status.to_string(),
+        file: file.to_string(),
+      });
+    }
+  }
+
+  Ok(DetailedCommit {
+    id,
+    message,
+    author,
+    date,
+    changes,
+  })
+}
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -285,7 +367,8 @@ pub fn run() {
       get_commit_details,
       get_commit_diff,
       get_git_references,
-      git::check_new_commits,
+      get_new_commits_details,
+      git::get_new_commits,
       git::clear_git_cache
     ]) // Combined into single handler
     .plugin(tauri_plugin_dialog::init())
