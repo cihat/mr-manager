@@ -20,16 +20,18 @@ export const items = [
   //   hasFolderPicker: true,
   // },
   {
-    title: "Track",
-    url: "/track",
-    icon: ViewIcon,
-    hasFolderPicker: false,
-  },
-  {
     title: "History",
     url: "/history",
     icon: History,
+    isComingSoon: false,
     hasFolderPicker: true,
+  },
+  {
+    title: "Track",
+    url: "/track",
+    icon: ViewIcon,
+    isComingSoon: false,
+    hasFolderPicker: false,
   },
   {
     title: "Docs",

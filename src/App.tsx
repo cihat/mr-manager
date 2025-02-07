@@ -16,13 +16,13 @@ function App() {
     <Layout>
       <Routes>
         {/* Redirect from root to /bash */}
-        <Route path="/" element={<Navigate to="/bash" replace />} />
+        <Route path="/" element={<Navigate to="/history" replace />} />
 
         {/* Main routes */}
         <Route path="/bash" element={<Apps />} />
         <Route path="/docs" element={<Docs />} />
         <Route path="/history" element={<GitHistory />} />
-        <Route path="/track" element={<Track/>} />
+        <Route path="/track" element={<Track />} />
 
         {/* Catch all route - redirects to /bash for any unknown paths */}
         <Route path="*" element={<Navigate to="/bash" replace />} />
