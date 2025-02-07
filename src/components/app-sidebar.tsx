@@ -12,18 +12,18 @@ import {
 } from "@/components/ui/sidebar"
 
 export const items = [
+  // {
+  //   title: "Bash",
+  //   url: "/bash",
+  //   icon: Command,
+  //   isComingSoon: true,
+  //   hasFolderPicker: true,
+  // },
   {
-    title: "Bash",
-    url: "/bash",
-    icon: Command,
-    isComingSoon: true,
-    hasFolderPicker: true,
-  },
-  {
-    title: "Docs",
-    url: "/docs",
-    icon: BookMarked,
-    hasFolderPicker: true,
+    title: "Track",
+    url: "/track",
+    icon: ViewIcon,
+    hasFolderPicker: false,
   },
   {
     title: "History",
@@ -32,10 +32,10 @@ export const items = [
     hasFolderPicker: true,
   },
   {
-    title: "Track",
-    url: "/track",
-    icon: ViewIcon,
-    hasFolderPicker: false,
+    title: "Docs",
+    url: "/docs",
+    icon: BookMarked,
+    hasFolderPicker: true,
   },
 ]
 
