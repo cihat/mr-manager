@@ -9,8 +9,6 @@ export const useFolderLoader = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log('monoRepoPath >>', monoRepoPath)
-
     const loadFolders = async () => {
       if (!monoRepoPath) return;
 

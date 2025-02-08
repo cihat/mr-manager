@@ -20,6 +20,7 @@ import type { NotificationSettings } from '@/store';
 import useStore from "@/store";
 import { ToggleGroup, ToggleGroupItem } from '@radix-ui/react-toggle-group';
 import CommitMonitor from './commit-monitor';
+import FolderToggle from '../folder-toggle';
 
 interface NotificationSettingsProps {
   folders?: { name: string }[];
@@ -50,10 +51,15 @@ const NotificationSettings = ({
 
   // Interval presets for dropdown
   const intervalPresets = [
+    { value: '1', label: '1 minute' },
     { value: '5', label: '5 minutes' },
     { value: '15', label: '15 minutes' },
     { value: '30', label: '30 minutes' },
-    { value: '60', label: '1 hour' }
+    { value: '60', label: '1 hour' },
+    { value: '120', label: '2 hours' },
+    { value: '240', label: '4 hours' },
+    { value: '480', label: '8 hours' },
+    { value: '1440', label: '1 day' },
   ];
 
   const handleFolderToggle = (folderName: string) => {
@@ -169,14 +175,15 @@ const NotificationSettings = ({
                   <CardTitle className="text-lg">Monitored Folders</CardTitle>
                   <CardDescription>Select folders to monitor for new commits</CardDescription>
                 </div>
-                <ToggleGroup
+                {/* <ToggleGroup
                   type="single"
                   value={currentView}
                   onValueChange={(value: 'libs' | 'apps') => value && setCurrentView(value)}
                 >
                   <ToggleGroupItem value="libs" className="w-24">Libs</ToggleGroupItem>
                   <ToggleGroupItem value="apps" className="w-24">Apps</ToggleGroupItem>
-                </ToggleGroup>
+                </ToggleGroup> */}
+                <FolderToggle />
               </div>
             </CardHeader>
             <CardContent>

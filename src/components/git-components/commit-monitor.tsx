@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 import { invoke } from '@tauri-apps/api/core';
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -6,25 +6,18 @@ import { BasicCommit } from '@/types';
 import useAppStore from '@/store';
 import { notificationSound } from '@/lib/notification-sound';
 
-// interface CommitMonitorProps {
-//   selectedFolders: string[];
-//   checkInterval: number;
-//   isEnabled: boolean;
-//   remote?: string;
-//   branch?: string;
-//   monoRepoPath: string;
-// }
-
 const BATCH_SIZE = 1;
 const BATCH_DELAY = 400;
 const MAX_COMMITS_TO_PROCESS = 30;
 const COMMIT_CHECK_TIMEOUT = 8000;
 
+const NOTIFIED_COMMITS_KEY = 'notifiedCommits';
+
 const CommitMonitor: React.FC = () => {
   const [error, setError] = useState('');
   const [isChecking, setIsChecking] = useState(false);
   const abortController = useRef<AbortController | null>(null);
-  const timerRef = useRef<null | number>(null);
+  const timerRef = useRef<number | null>(null);
   const lastCheckedTimestamp = useRef<number>(0);
 
   const {
@@ -43,93 +36,96 @@ const CommitMonitor: React.FC = () => {
     isEnabled
   } = notificationSettings;
 
-  // Optimize localStorage usage with debouncing
-  const [notifiedCommits, setNotifiedCommits] = useState<Set<string>>(() => {
+  // Get notified commits from localStorage
+  const getNotifiedCommits = (): string[] => {
     try {
-      const stored = localStorage.getItem('notifiedCommits');
-      return new Set(stored ? JSON.parse(stored) : []);
+      const stored = localStorage.getItem(NOTIFIED_COMMITS_KEY);
+      return stored ? JSON.parse(stored) : [];
     } catch {
-      return new Set();
+      return [];
     }
-  });
+  };
 
-  // Debounced localStorage update
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      try {
-        localStorage.setItem('notifiedCommits', JSON.stringify([...notifiedCommits]));
-      } catch (error) {
-        console.error('Failed to save to localStorage:', error);
+  // Add commit to notified list
+  const addNotifiedCommit = (commitId: string) => {
+    try {
+      const notifiedCommits = getNotifiedCommits();
+      if (!notifiedCommits.includes(commitId)) {
+        notifiedCommits.push(commitId);
+        localStorage.setItem(NOTIFIED_COMMITS_KEY, JSON.stringify(notifiedCommits));
       }
-    }, 1000);
+    } catch (error) {
+      console.error('Failed to save notified commit:', error);
+    }
+  };
 
-    return () => clearTimeout(timeoutId);
-  }, [notifiedCommits]);
+  // Check if commit is already notified
+  const isCommitNotified = (commitId: string): boolean => {
+    const notifiedCommits = getNotifiedCommits();
+    return notifiedCommits.includes(commitId);
+  };
 
-  // Memoize commit batch processing
-  const processCommitBatch = useCallback(async (
+  const processCommitBatchRef = useRef(async (
     commits: BasicCommit[],
     basePath: string,
     signal: AbortSignal
   ) => {
-    // Process commits in parallel but with limits
-    const results = await Promise.allSettled(
-      commits.map(async (commit) => {
-        if (signal.aborted || notifiedCommits.has(commit.id)) return;
+    // Filter out already notified commits first
+    const newCommits = commits.filter(commit => !isCommitNotified(commit.id));
 
-        const folderPromises = selectedFolders.map(async (folder) => {
-          if (signal.aborted) return;
+    if (newCommits.length === 0) {
+      return;
+    }
 
-          const folderPath = `${basePath}/${folder}`;
-          try {
-            const details = await invoke('get_new_commits_details', {
-              repoPath: folderPath,
-              commitId: commit.id,
-            }) as {
-              changes: any;
-              files: { path: string }[];
-            };
+    for (const commit of newCommits) {
+      if (signal.aborted) break;
 
-            if (details.changes.some((files: { file: string; }) =>
-              files.file.includes(folder)
-            )) {
-              return { commit, folder };
+      // Double check if commit is still not notified
+      if (isCommitNotified(commit.id)) {
+        continue;
+      }
+
+      for (const folder of selectedFolders) {
+        if (signal.aborted) break;
+
+        const folderPath = `${basePath}/${folder}`;
+        try {
+          const details = await invoke('get_new_commits_details', {
+            repoPath: folderPath,
+            commitId: commit.id,
+          }) as {
+            changes: any;
+            files: { path: string }[];
+          };
+
+          if (details.changes.some((files: { file: string; }) =>
+            files.file.includes(folder)
+          )) {
+            // Final check before notification
+            if (!isCommitNotified(commit.id)) {
+              await notificationSound();
+              await sendNotification({
+                title: `New Commit in ${folder}`,
+                body: `${commit.author}: ${commit.message}`,
+              });
+              addNotifiedCommit(commit.id);
+              break; // Exit folder loop after notification
             }
-          } catch (error) {
-            console.warn(
-              `Skipping commit ${commit.id} for folder ${folder}:`,
-              error
-            );
           }
-          return null;
-        });
-
-        const results = await Promise.all(folderPromises);
-        return results.filter(Boolean);
-      })
-    );
-
-    // Process notifications after all checks
-    for (const result of results) {
-      if (result.status === 'fulfilled' && result.value) {
-        for (const notification of result.value) {
-          if (notification) {
-            const { commit, folder } = notification;
-            await notificationSound();
-            await sendNotification({
-              title: `New Commit in ${folder}`,
-              body: `${commit.author}: ${commit.message}`,
-            });
-            setNotifiedCommits(prev => new Set([...prev, commit.id]));
-          }
+        } catch (error) {
+          console.warn(
+            `Skipping commit ${commit.id} for folder ${folder}:`,
+            error
+          );
         }
       }
     }
-  }, [selectedFolders, notifiedCommits]);
+  });
 
-  const checkNewCommits = useCallback(async () => {
-    // Throttle checks
+  const checkNewCommitsRef = useRef(async () => {
     const now = Date.now();
+    console.log('Checking new commits...');
+    
     if (now - lastCheckedTimestamp.current < checkInterval * 500) {
       return;
     }
@@ -138,7 +134,6 @@ const CommitMonitor: React.FC = () => {
       return;
     }
 
-    // Cancel any ongoing check
     if (abortController.current) {
       abortController.current.abort();
     }
@@ -164,8 +159,7 @@ const CommitMonitor: React.FC = () => {
         ? getLibsPath(monoRepoPath)
         : getAppsPath(monoRepoPath);
 
-      // Get initial commits list with timeout
-      const newCommitsPromise = await invoke('get_new_commits', {
+      const newCommitsPromise = invoke('get_new_commits', {
         path: monoRepoPath,
         remote,
         branch
@@ -182,21 +176,25 @@ const CommitMonitor: React.FC = () => {
 
       if (signal.aborted) return;
 
-      // Limit the number of commits to process
-      newCommits = newCommits.slice(0, MAX_COMMITS_TO_PROCESS);
+      // Filter already notified commits
+      newCommits = newCommits
+        .filter(commit => !isCommitNotified(commit.id))
+        .slice(0, MAX_COMMITS_TO_PROCESS);
 
-      // Process commits in smaller batches with delays
+      if (newCommits.length === 0) {
+        setIsChecking(false);
+        return;
+      }
+
       for (let i = 0; i < newCommits.length; i += BATCH_SIZE) {
         if (signal.aborted) break;
 
         const batch = newCommits.slice(i, i + BATCH_SIZE);
-        await processCommitBatch(batch, basePath, signal);
+        await processCommitBatchRef.current(batch, basePath, signal);
 
         if (i + BATCH_SIZE < newCommits.length) {
           await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
         }
-        console.log('Processed commits:', i + batch.length);
-
       }
     } catch (error) {
       if (!signal.aborted) {
@@ -208,7 +206,7 @@ const CommitMonitor: React.FC = () => {
         setIsChecking(false);
       }
     }
-  }, [isEnabled, checkInterval, selectedFolders, currentView, monoRepoPath, processCommitBatch]);
+  });
 
   // Cleanup effect
   useEffect(() => {
@@ -216,29 +214,33 @@ const CommitMonitor: React.FC = () => {
       if (abortController.current) {
         abortController.current.abort();
       }
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
       }
     };
   }, []);
 
   // Timer effect
   useEffect(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
     }
 
+    const runCheck = () => {
+      checkNewCommitsRef.current();
+      timerRef.current = window.setTimeout(runCheck, checkInterval * 60 * 1000);
+    };
+
     if (isEnabled && checkInterval > 0) {
-      checkNewCommits();
-      timerRef.current = window.setInterval(checkNewCommits, checkInterval * 60 * 1000);
+      runCheck();
     }
 
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
       }
     };
-  }, [isEnabled, checkInterval, checkNewCommits]);
+  }, [isEnabled, checkInterval]);
 
   if (error) {
     return (

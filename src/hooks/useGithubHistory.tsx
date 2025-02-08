@@ -26,10 +26,10 @@ const useGitHistory = () => {
 
   const { monoRepoPath, currentView, folders, selectedFolder, notificationSettings, updateNotificationSettings, getLibsPath, getAppsPath, setSelectedFolder } = useAppStore();
 
-  useEffect(() => {
-    setSearchQuery('');
-    setCommits([]);
-  }, [currentView]);
+  // useEffect(() => {
+  //   setSearchQuery('');
+  //   setCommits([]);
+  // }, [currentView]);
 
 
   const handleListReferences = async () => {

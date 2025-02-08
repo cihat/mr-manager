@@ -1,6 +1,6 @@
 const notificationSound = async (): Promise<void> => {
   try {
-    const audio = new Audio('/notification.mp3');
+    const audio = new Audio('/pop-alert.mp3');
     await audio.play();
   } catch (error) {
     console.error('Error playing notification sound:', error);

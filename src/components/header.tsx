@@ -1,5 +1,4 @@
 import React, { useCallback } from 'react';
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import FolderPicker from "@/components/folder-picker";
@@ -8,12 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { items } from './app-sidebar';
 import { useLocation } from 'react-router';
+import FolderToggle from './folder-toggle';
 
 export const Header: React.FC = () => {
   const {
-    currentView,
     searchQuery,
-    setCurrentView,
     setSearchQuery,
   } = useStore();
   const location = useLocation();
@@ -39,14 +37,7 @@ export const Header: React.FC = () => {
               className="pl-8"
             />
           </div>
-          <ToggleGroup
-            type="single"
-            value={currentView}
-            onValueChange={(value: 'libs' | 'apps') => value && setCurrentView(value)}
-          >
-            <ToggleGroupItem value="libs" className="">Libs</ToggleGroupItem>
-            <ToggleGroupItem value="apps" className="">Apps</ToggleGroupItem>
-          </ToggleGroup>
+          <FolderToggle />
         </>
       }
       <FolderPicker />
