@@ -115,7 +115,7 @@ const CommitDetails: React.FC<CommitDetailsProps> = ({ commit, repoPath }) => {
             Changes ({commit.changes.length})
           </h4>
           {commit.changes.map((change, idx) => (
-            <Tooltip>
+            <Tooltip key={idx}>
               <TooltipTrigger>
                 <div
                   key={idx}

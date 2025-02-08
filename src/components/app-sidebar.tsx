@@ -1,4 +1,4 @@
-import { BookMarked, History, Command, ViewIcon } from "lucide-react"
+import { BookMarked, History, ViewIcon } from "lucide-react"
 import { Link, useLocation } from "react-router"
 import {
   Sidebar,

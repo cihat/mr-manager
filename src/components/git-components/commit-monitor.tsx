@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 import { invoke } from '@tauri-apps/api/core';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { BasicCommit } from '@/types';
 import useAppStore from '@/store';
+import { notificationSound } from '@/lib/notification-sound';
 
 interface CommitMonitorProps {
   selectedFolders: string[];
@@ -14,19 +15,35 @@ interface CommitMonitorProps {
   monoRepoPath: string;
 }
 
-const CommitMonitor: React.FC<CommitMonitorProps> = ({
-  selectedFolders,
-  checkInterval,
-  isEnabled,
-  remote = 'upstream',
-  branch = 'master',
-  monoRepoPath
-}) => {
-  const [error, setError] = useState('');
-  const timerRef = useRef<null | number>(null);
-  const { currentView, getLibsPath, getAppsPath } = useAppStore();
+const BATCH_SIZE = 1;
+const BATCH_DELAY = 400;
+const MAX_COMMITS_TO_PROCESS = 30;
+const COMMIT_CHECK_TIMEOUT = 8000;
 
-  // Load notified commits from localStorage on component mount
+const CommitMonitor: React.FC<CommitMonitorProps> = () => {
+  const [error, setError] = useState('');
+  const [isChecking, setIsChecking] = useState(false);
+  const abortController = useRef<AbortController | null>(null);
+  const timerRef = useRef<null | number>(null);
+  const lastCheckedTimestamp = useRef<number>(0);
+
+  const {
+    currentView,
+    getLibsPath,
+    getAppsPath,
+    monoRepoPath,
+    notificationSettings
+  } = useAppStore();
+
+  const remote = 'upstream';
+  const branch = 'master';
+  const {
+    monitoredFolders: selectedFolders,
+    checkInterval,
+    isEnabled
+  } = notificationSettings;
+
+  // Optimize localStorage usage with debouncing
   const [notifiedCommits, setNotifiedCommits] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem('notifiedCommits');
@@ -36,93 +53,184 @@ const CommitMonitor: React.FC<CommitMonitorProps> = ({
     }
   });
 
-  // Update localStorage whenever notifiedCommits changes
+  // Debounced localStorage update
   useEffect(() => {
-    try {
-      localStorage.setItem('notifiedCommits', JSON.stringify([...notifiedCommits]));
-    } catch (error) {
-      console.error('Failed to save to localStorage:', error);
-    }
+    const timeoutId = setTimeout(() => {
+      try {
+        localStorage.setItem('notifiedCommits', JSON.stringify([...notifiedCommits]));
+      } catch (error) {
+        console.error('Failed to save to localStorage:', error);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
   }, [notifiedCommits]);
 
-  // Clean up old notifications after 7 days
-  useEffect(() => {
-    const cleanupOldNotifications = () => {
-      try {
-        const stored = localStorage.getItem('notifiedCommits');
-        if (stored) {
-          const commits = JSON.parse(stored);
-          localStorage.setItem('notifiedCommits', JSON.stringify(commits.slice(-1000))); // Keep last 1000 commits
+  // Memoize commit batch processing
+  const processCommitBatch = useCallback(async (
+    commits: BasicCommit[],
+    basePath: string,
+    signal: AbortSignal
+  ) => {
+    // Process commits in parallel but with limits
+    const results = await Promise.allSettled(
+      commits.map(async (commit) => {
+        if (signal.aborted || notifiedCommits.has(commit.id)) return;
+
+        const folderPromises = selectedFolders.map(async (folder) => {
+          if (signal.aborted) return;
+
+          const folderPath = `${basePath}/${folder}`;
+          try {
+            const details = await invoke('get_new_commits_details', {
+              repoPath: folderPath,
+              commitId: commit.id,
+            }) as {
+              changes: any;
+              files: { path: string }[];
+            };
+
+            if (details.changes.some((files: { file: string; }) =>
+              files.file.includes(folder)
+            )) {
+              return { commit, folder };
+            }
+          } catch (error) {
+            console.warn(
+              `Skipping commit ${commit.id} for folder ${folder}:`,
+              error
+            );
+          }
+          return null;
+        });
+
+        const results = await Promise.all(folderPromises);
+        return results.filter(Boolean);
+      })
+    );
+
+    // Process notifications after all checks
+    for (const result of results) {
+      if (result.status === 'fulfilled' && result.value) {
+        for (const notification of result.value) {
+          if (notification) {
+            const { commit, folder } = notification;
+            await notificationSound();
+            await sendNotification({
+              title: `New Commit in ${folder}`,
+              body: `${commit.author}: ${commit.message}`,
+            });
+            setNotifiedCommits(prev => new Set([...prev, commit.id]));
+          }
         }
-      } catch (error) {
-        console.error('Failed to cleanup notifications:', error);
       }
-    };
+    }
+  }, [selectedFolders, notifiedCommits]);
 
-    // Run cleanup daily
-    const cleanup = setInterval(cleanupOldNotifications, 24 * 60 * 60 * 1000);
-    return () => clearInterval(cleanup);
-  }, []);
+  const checkNewCommits = useCallback(async () => {
+    // Throttle checks
+    const now = Date.now();
+    if (now - lastCheckedTimestamp.current < checkInterval * 500) {
+      return;
+    }
 
-  const checkNewCommits = async () => {
-    if (!isEnabled || selectedFolders.length === 0) return;
+    if (!isEnabled || selectedFolders.length === 0 || isChecking) {
+      return;
+    }
+
+    // Cancel any ongoing check
+    if (abortController.current) {
+      abortController.current.abort();
+    }
+
+    abortController.current = new AbortController();
+    const { signal } = abortController.current;
+
+    setIsChecking(true);
+    setError('');
+    lastCheckedTimestamp.current = now;
 
     try {
       const permissionGranted = await isPermissionGranted();
       if (!permissionGranted) {
         const permission = await requestPermission();
-        if (permission !== 'granted') return;
-      }
-
-      const basePath = currentView === "libs" ? getLibsPath(monoRepoPath) : getAppsPath(monoRepoPath);
-
-      for (const folder of selectedFolders) {
-        const folderPath = `${basePath}/${folder}`;
-
-        const newCommits: BasicCommit[] = await invoke('get_new_commits', {
-          path: monoRepoPath,
-          remote,
-          branch
-        });
-
-        for (const commit of newCommits) {
-          // Skip if we've already notified about this commit
-          if (notifiedCommits.has(commit.id)) continue;
-
-          const details = await invoke('get_new_commits_details', {
-            repoPath: folderPath,
-            commitId: commit.id,
-          }) as {
-            changes: any;
-            files: { path: string }[];
-          };
-
-          // Check if the commit affects the monitored folder
-          if (details.changes.some((files: { file: string; }) => files.file.includes(folder))) {
-            await sendNotification({
-              title: `New Commit in ${folder}`,
-              body: `${commit.author}: ${commit.message}`
-            });
-
-            // Mark this commit as notified
-            setNotifiedCommits(prev => new Set([...prev, commit.id]));
-          }
+        if (permission !== 'granted') {
+          setIsChecking(false);
+          return;
         }
       }
-    } catch (error) {
-      setError(`Failed to check commits: ${error}`);
-      console.error('Commit check error:', error);
-    }
-  };
 
+      const basePath = currentView === "libs"
+        ? getLibsPath(monoRepoPath)
+        : getAppsPath(monoRepoPath);
+
+      // Get initial commits list with timeout
+      const newCommitsPromise = invoke('get_new_commits', {
+        path: monoRepoPath,
+        remote,
+        branch
+      });
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Commit fetch timeout')), COMMIT_CHECK_TIMEOUT);
+      });
+
+      let newCommits = await Promise.race([
+        newCommitsPromise,
+        timeoutPromise
+      ]) as BasicCommit[];
+
+      if (signal.aborted) return;
+
+      // Limit the number of commits to process
+      newCommits = newCommits.slice(0, MAX_COMMITS_TO_PROCESS);
+
+      // Process commits in smaller batches with delays
+      for (let i = 0; i < newCommits.length; i += BATCH_SIZE) {
+        if (signal.aborted) break;
+
+        const batch = newCommits.slice(i, i + BATCH_SIZE);
+        await processCommitBatch(batch, basePath, signal);
+
+        if (i + BATCH_SIZE < newCommits.length) {
+          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+        }
+        console.log('Processed commits:', i + batch.length);
+
+      }
+    } catch (error) {
+      if (!signal.aborted) {
+        console.error('Commit check error:', error);
+        setError(`Failed to check commits: ${error}`);
+      }
+    } finally {
+      if (!signal.aborted) {
+        setIsChecking(false);
+      }
+    }
+  }, [isEnabled, checkInterval, selectedFolders, currentView, monoRepoPath, processCommitBatch]);
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      if (abortController.current) {
+        abortController.current.abort();
+      }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, []);
+
+  // Timer effect
   useEffect(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
 
     if (isEnabled && checkInterval > 0) {
-      checkNewCommits(); // Initial check
-      timerRef.current = setInterval(checkNewCommits, checkInterval * 5 * 1000);
+      checkNewCommits();
+      timerRef.current = window.setInterval(checkNewCommits, checkInterval * 60 * 1000);
     }
 
     return () => {
@@ -130,7 +238,7 @@ const CommitMonitor: React.FC<CommitMonitorProps> = ({
         clearInterval(timerRef.current);
       }
     };
-  }, [isEnabled, checkInterval, monoRepoPath]);
+  }, [isEnabled, checkInterval, checkNewCommits]);
 
   if (error) {
     return (

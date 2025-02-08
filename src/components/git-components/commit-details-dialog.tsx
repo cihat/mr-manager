@@ -12,7 +12,7 @@ const CommitDetailsDialog: React.FC<{
   currentRepoPath: string;
 }> = ({ isDetailsOpen, setIsDetailsOpen, selectedCommit, detailsLoading, currentRepoPath }) => (
   <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-    <DialogContent className="max-w-[90vw] h-[90vh] p-6 block">
+    <DialogContent className="max-w-[90vw] h-[90vh] p-6 block" aria-describedby='commit-details' aria-description='commit-details'>
       <DialogHeader>
         <DialogTitle>Commit Details</DialogTitle>
       </DialogHeader>

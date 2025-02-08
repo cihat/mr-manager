@@ -1,3 +1,5 @@
+//@ts-nocheck
+
 import { useState, useEffect, useMemo } from 'react';
 import { Bell, Settings2, FolderGit2, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -34,12 +36,12 @@ const NotificationSettings = ({
   defaultInterval = 15,
   defaultEnabledFolders = []
 }: NotificationSettingsProps) => {
-  const [isEnabled, setIsEnabled] = useState(true);
-  const [checkInterval, setCheckInterval] = useState(defaultInterval);
-  const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set(defaultEnabledFolders));
+  // const [isEnabled, setIsEnabled] = useState(true);
+  // const [checkInterval, setCheckInterval] = useState(defaultInterval);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState('');
-  const { currentView, setCurrentView, monoRepoPath } = useStore();
+  const { currentView, setCurrentView, monoRepoPath, updateNotificationSettings, notificationSettings } = useStore();
+  const { monitoredFolders, checkInterval, isEnabled } = notificationSettings;
 
   // Initialize Fuse instance for fuzzy search
   const fuse = useMemo(() => new Fuse(folders, {
@@ -73,15 +75,25 @@ const NotificationSettings = ({
   // }, [isEnabled, checkInterval, selectedFolders]);
 
   const handleFolderToggle = (folderName: string) => {
-    setSelectedFolders(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(folderName)) {
-        newSet.delete(folderName);
-      } else {
-        newSet.add(folderName);
-      }
-      return newSet;
-    });
+    updateNotificationSettings({
+      isEnabled,
+      checkInterval,
+      monitoredFolders: monitoredFolders.includes(folderName)
+        ? monitoredFolders.filter(name => name !== folderName)
+        : [...monitoredFolders, folderName]
+      // monitoredFolders: selectedFolders.has(folderName)
+      //   ? Array.from(selectedFolders).filter(name => name !== folderName)
+      //   : [...selectedFolders, folderName]
+    })
+    // setSelectedFolders(prev => {
+    //   const newSet = new Set(prev);
+    //   if (newSet.has(folderName)) {
+    //     newSet.delete(folderName);
+    //   } else {
+    //     newSet.add(folderName);
+    //   }
+    //   return newSet;
+    // });
   };
 
   const handleIntervalChange = (value: string) => {
@@ -91,7 +103,12 @@ const NotificationSettings = ({
       return;
     }
     setError('');
-    setCheckInterval(interval);
+    // setCheckInterval(interval);
+    updateNotificationSettings({
+      isEnabled,
+      checkInterval: interval,
+      monitoredFolders
+    })
   };
 
   return (
@@ -102,7 +119,7 @@ const NotificationSettings = ({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl" aria-describedby='notification-settings' aria-description='Notification settings dialog'>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
@@ -122,7 +139,11 @@ const NotificationSettings = ({
               <Switch
                 id="notifications-enabled"
                 checked={isEnabled}
-                onCheckedChange={setIsEnabled}
+                onCheckedChange={() => updateNotificationSettings({
+                  isEnabled: !isEnabled,
+                  checkInterval,
+                  monitoredFolders
+                })}
               />
             </CardContent>
           </Card>
@@ -207,7 +228,7 @@ const NotificationSettings = ({
                     <div key={folder.name} className="flex items-center gap-2 p-2 hover:bg-accent rounded-lg">
                       <Switch
                         id={`folder-${folder.name}`}
-                        checked={selectedFolders.has(folder.name)}
+                        checked={monitoredFolders.includes(folder.name)}
                         onCheckedChange={() => handleFolderToggle(folder.name)}
                       />
                       <Label htmlFor={`folder-${folder.name}`} className="flex items-center gap-2">
@@ -228,10 +249,10 @@ const NotificationSettings = ({
         </div>
       </DialogContent>
       <CommitMonitor
-        selectedFolders={Array.from(selectedFolders)}
-        checkInterval={checkInterval}
-        isEnabled={isEnabled}
-        monoRepoPath={monoRepoPath}
+        // selectedFolders={monitoredFolders}
+        // checkInterval={checkInterval}
+        // isEnabled={isEnabled}
+        // monoRepoPath={monoRepoPath}
       />
     </Dialog>
   );
