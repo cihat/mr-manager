@@ -94,19 +94,17 @@ const GitHistory = ({ className }: { className?: string }) => {
   const [initializationLoading, setInitializationLoading] = useState(false);
 
   const initializeNewCommits = useCallback(async () => {
-    if (selectedFolder) {
-      setInitializationLoading(true);
-      try {
-        await handleFolderClickForNewCommits(selectedFolder);
-      } finally {
-        setInitializationLoading(false);
-      }
+    setInitializationLoading(true);
+    try {
+      await handleFolderClickForNewCommits();
+    } finally {
+      setInitializationLoading(false);
     }
   }, [selectedFolder, handleFolderClickForNewCommits]);
 
   useEffect(() => {
     initializeNewCommits();
-  }, [refreshing, selectedFolder]);
+  }, [refreshing]);
 
   const isLoading = loading || initializationLoading;
 
