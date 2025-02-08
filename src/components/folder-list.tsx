@@ -128,7 +128,7 @@ const EmptyState = ({ title, description }: { title: string; description: string
 const FolderList: React.FC<FolderListProps> = ({
   folders = [],
   onClick = () => {},
-  handleGenerateDoc,
+  handleGenerateDoc = () => {},
   children,
   icon: Icon,
   selectedFolder,

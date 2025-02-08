@@ -54,7 +54,7 @@ const PreviewDocs = () => {
   }, [selectedFolder, currentGeneratedFolder]);
 
   return (
-    <Card className="w-full h-full p-2 bg-background rounded-none border-none">
+    <Card className="w-full h-full p-2 bg-background rounded-none border-none col-span-3">
       {loading ? (
         <div className="w-full h-full flex items-center justify-center">
           <div className="text-center space-y-4">
