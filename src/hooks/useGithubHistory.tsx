@@ -26,6 +26,7 @@ const useGitHistory = () => {
 
   const { monoRepoPath, currentView, folders, selectedFolder, notificationSettings, updateNotificationSettings, getLibsPath, getAppsPath, setSelectedFolder } = useAppStore();
 
+  //! Fix it this logic
   // useEffect(() => {
   //   setSearchQuery('');
   //   setCommits([]);

@@ -11,8 +11,10 @@ export interface Folder {
 
 export interface NotificationSettings {
   isEnabled: boolean;
+  soundEnabled: boolean;
   checkInterval: number;
   monitoredFolders: string[];
+  selectedSound: string;
 }
 
 interface StoreState {
@@ -55,6 +57,8 @@ const initialState: StoreState = {
   favorites: [],
   notificationSettings: {
     isEnabled: true,
+    soundEnabled: true,
+    selectedSound: 'sweet-kitty-meow',
     checkInterval: 15,
     monitoredFolders: []
   },

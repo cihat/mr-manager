@@ -1,5 +1,6 @@
+// components/notification-settings.tsx
 import { useState, useMemo } from 'react';
-import { Bell, Settings2, FolderGit2, Search } from 'lucide-react';
+import { Bell, Settings2, FolderGit2, Search, Volume2, VolumeX } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,9 +19,8 @@ import {
 } from "@/components/ui/select";
 import type { NotificationSettings } from '@/store';
 import useStore from "@/store";
-import { ToggleGroup, ToggleGroupItem } from '@radix-ui/react-toggle-group';
-import CommitMonitor from './commit-monitor';
 import FolderToggle from '../folder-toggle';
+import CommitMonitor from './commit-monitor';
 
 interface NotificationSettingsProps {
   folders?: { name: string }[];
@@ -34,20 +34,33 @@ const NotificationSettings = ({
 }: NotificationSettingsProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState('');
-  const { currentView, setCurrentView, updateNotificationSettings, notificationSettings } = useStore();
-  const { monitoredFolders, checkInterval, isEnabled } = notificationSettings;
+  const { updateNotificationSettings, notificationSettings } = useStore();
+  const { monitoredFolders, checkInterval, isEnabled, soundEnabled, selectedSound } = notificationSettings;
 
-  const fuse = useMemo(() => new Fuse(folders, {
-    keys: ['name'],
-    threshold: 0.3,
-    shouldSort: true
-  }), [folders]);
-
-  // Filter folders based on search query
-  const filteredFolders = useMemo(() => {
-    if (!searchQuery) return folders;
-    return fuse.search(searchQuery).map(result => result.item);
-  }, [searchQuery, folders, fuse]);
+  // Available notification sounds
+  const availableSounds = [
+    { value: 'pop-alert', label: 'Pop Alert' },
+    { value: 'notification', label: 'Long Pop' },
+    { value: 'sci-fi-confirmation', label: 'Sci Fi Confirmation' },
+    { value: 'software-interface-back', label: 'Software Interface Back' },
+    { value: 'arabian-mystery-harp', label: 'Arabian Mystery Harp' },
+    { value: 'confirmation-tone', label: 'Confirmation Tone' },
+    { value: 'happy-bells', label: 'Happy Bells' },
+    { value: 'interface-option-select', label: 'Interface Option Select' },
+    { value: 'magic-notification-ring', label: 'Magic Notification Ring' },
+    { value: 'melodical-flute-music', label: 'Melodical Flute Music' },
+    { value: 'positive-notification', label: 'Positive Notification' },
+    { value: 'software-interface', label: 'Software Interface' },
+    { value: 'urgent-simple-tone-loop', label: 'Urgent Simple Tone Loop' },
+    { value: 'wrong-answer-fail', label: 'Wrong Answer Fail' },
+    { value: 'angry-cartoon-kitty-meow', label: 'Angry Cartoon Kitty Meow' },
+    { value: 'cartoon-kitty-begging-meow', label: 'Cartoon Kitty Begging Meow' },
+    { value: 'cartoon-little-cat-meow', label: 'Cartoon Little Cat Meow' },
+    { value: 'domestic-cat-hungry-meow', label: 'Domestic Cat Hungry Meow' },
+    { value: 'little-cat-attention-meow', label: 'Little Cat Attention Meow' },
+    { value: 'little-cat-pain-meow', label: 'Little Cat Pain Meow' },
+    { value: 'sweet-kitty-meow', label: 'Sweet Kitty Meow' },
+  ];
 
   // Interval presets for dropdown
   const intervalPresets = [
@@ -62,14 +75,25 @@ const NotificationSettings = ({
     { value: '1440', label: '1 day' },
   ];
 
+  const fuse = useMemo(() => new Fuse(folders, {
+    keys: ['name'],
+    threshold: 0.3,
+    shouldSort: true
+  }), [folders]);
+
+  // Filter folders based on search query
+  const filteredFolders = useMemo(() => {
+    if (!searchQuery) return folders;
+    return fuse.search(searchQuery).map(result => result.item);
+  }, [searchQuery, folders, fuse]);
+
   const handleFolderToggle = (folderName: string) => {
     updateNotificationSettings({
-      isEnabled,
-      checkInterval,
+      ...notificationSettings,
       monitoredFolders: monitoredFolders.includes(folderName)
         ? monitoredFolders.filter(name => name !== folderName)
         : [...monitoredFolders, folderName]
-    })
+    });
   };
 
   const handleIntervalChange = (value: string) => {
@@ -80,10 +104,32 @@ const NotificationSettings = ({
     }
     setError('');
     updateNotificationSettings({
-      isEnabled,
-      checkInterval: interval,
-      monitoredFolders
-    })
+      ...notificationSettings,
+      checkInterval: interval
+    });
+  };
+
+  const previewSound = async (soundName: string) => {
+    try {
+      const audio = new Audio(`/sound/${soundName}.mp3`);
+      await audio.play();
+    } catch (error) {
+      console.error('Error playing preview sound:', error);
+    }
+  };
+
+  const handleSoundChange = (value: string) => {
+    updateNotificationSettings({
+      ...notificationSettings,
+      selectedSound: value
+    });
+  };
+
+  const toggleSound = () => {
+    updateNotificationSettings({
+      ...notificationSettings,
+      soundEnabled: !soundEnabled
+    });
   };
 
   return (
@@ -94,7 +140,7 @@ const NotificationSettings = ({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-2xl" aria-describedby='notification-settings' aria-description='Notification settings dialog'>
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Bell className="h-5 w-5" />
@@ -115,11 +161,69 @@ const NotificationSettings = ({
                 id="notifications-enabled"
                 checked={isEnabled}
                 onCheckedChange={() => updateNotificationSettings({
-                  isEnabled: !isEnabled,
-                  checkInterval,
-                  monitoredFolders
+                  ...notificationSettings,
+                  isEnabled: !isEnabled
                 })}
               />
+            </CardContent>
+          </Card>
+
+          {/* Sound Settings Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Sound Settings</CardTitle>
+              <CardDescription>Configure notification sound preferences</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {soundEnabled ? (
+                    <Volume2 className="h-4 w-4" />
+                  ) : (
+                    <VolumeX className="h-4 w-4" />
+                  )}
+                  <Label htmlFor="sound-enabled">Enable Sound Notifications</Label>
+                </div>
+                <Switch
+                  id="sound-enabled"
+                  checked={soundEnabled}
+                  onCheckedChange={toggleSound}
+                />
+              </div>
+
+              <div className="flex items-center gap-4">
+                <Select
+                  value={selectedSound}
+                  onValueChange={handleSoundChange}
+                  disabled={!soundEnabled}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Select sound" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableSounds.map(sound => (
+                      <div key={sound.value} className="flex items-center justify-between px-2 py-1.5 hover:bg-accent">
+                        <SelectItem value={sound.value}>
+                          {sound.label}
+                        </SelectItem>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            previewSound(sound.value);
+                          }}
+                        >
+                          <Bell className="h-4 w-4" />
+                          <span className="sr-only">Play {sound.label}</span>
+                        </Button>
+                      </div>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardContent>
           </Card>
 
@@ -175,14 +279,6 @@ const NotificationSettings = ({
                   <CardTitle className="text-lg">Monitored Folders</CardTitle>
                   <CardDescription>Select folders to monitor for new commits</CardDescription>
                 </div>
-                {/* <ToggleGroup
-                  type="single"
-                  value={currentView}
-                  onValueChange={(value: 'libs' | 'apps') => value && setCurrentView(value)}
-                >
-                  <ToggleGroupItem value="libs" className="w-24">Libs</ToggleGroupItem>
-                  <ToggleGroupItem value="apps" className="w-24">Apps</ToggleGroupItem>
-                </ToggleGroup> */}
                 <FolderToggle />
               </div>
             </CardHeader>
