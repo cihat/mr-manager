@@ -60,7 +60,7 @@ const LoadingSpinner = ({ message }: { message?: string }) => (
 type CommitListSection = {
   loading: boolean;
   commits: BasicCommit[];
-  selectedFolder: string;
+  selectedFolder: string | null;
   onCommitClick: (commit: BasicCommit) => void;
   onLoadMore: () => void;
   hasMore: boolean;

@@ -6,9 +6,9 @@ import { BasicCommit } from '@/types';
 import useAppStore from '@/store';
 import { notificationSound } from '@/lib/notification-sound';
 
-const BATCH_SIZE = 1;
-const BATCH_DELAY = 400;
-const MAX_COMMITS_TO_PROCESS = 30;
+const BATCH_SIZE = 3;
+const BATCH_DELAY = 300;
+const MAX_COMMITS_TO_PROCESS = 60;
 const COMMIT_CHECK_TIMEOUT = 8000;
 
 const NOTIFIED_COMMITS_KEY = 'notifiedCommits';

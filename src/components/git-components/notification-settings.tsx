@@ -20,7 +20,6 @@ import {
 import type { NotificationSettings } from '@/store';
 import useStore from "@/store";
 import FolderToggle from '../folder-toggle';
-import CommitMonitor from './commit-monitor';
 
 interface NotificationSettingsProps {
   folders?: { name: string }[];
@@ -82,11 +81,25 @@ const NotificationSettings = ({
   }), [folders]);
 
   // Filter folders based on search query
-  const filteredFolders = useMemo(() => {
-    if (!searchQuery) return folders;
-    return fuse.search(searchQuery).map(result => result.item);
-  }, [searchQuery, folders, fuse]);
+  const sortedAndFilteredFolders = useMemo(() => {
+    let filteredResults = searchQuery
+      ? fuse.search(searchQuery).map(result => result.item)
+      : folders;
 
+    // Sort folders: monitored folders first, then alphabetically within each group
+    return filteredResults.sort((a, b) => {
+      const isAMonitored = monitoredFolders.includes(a.name);
+      const isBMonitored = monitoredFolders.includes(b.name);
+
+      if (isAMonitored && !isBMonitored) return -1;
+      if (!isAMonitored && isBMonitored) return 1;
+
+      // If both are monitored or both are not monitored, sort alphabetically
+      return a.name.localeCompare(b.name);
+    });
+  }, [searchQuery, folders, fuse, monitoredFolders]);
+
+  // Rest of the component logic remains the same...
   const handleFolderToggle = (folderName: string) => {
     updateNotificationSettings({
       ...notificationSettings,
@@ -95,7 +108,6 @@ const NotificationSettings = ({
         : [...monitoredFolders, folderName]
     });
   };
-
   const handleIntervalChange = (value: string) => {
     const interval = parseInt(value, 10);
     if (interval < 1) {
@@ -149,7 +161,6 @@ const NotificationSettings = ({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Main toggle */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Notification Status</CardTitle>
@@ -167,8 +178,6 @@ const NotificationSettings = ({
               />
             </CardContent>
           </Card>
-
-          {/* Sound Settings Card */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Sound Settings</CardTitle>
@@ -226,8 +235,6 @@ const NotificationSettings = ({
               </div>
             </CardContent>
           </Card>
-
-          {/* Check interval settings */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Check Interval</CardTitle>
@@ -270,8 +277,6 @@ const NotificationSettings = ({
               )}
             </CardContent>
           </Card>
-
-          {/* Folder selection */}
           <Card>
             <CardHeader>
               <div className='flex justify-between w-full'>
@@ -296,8 +301,12 @@ const NotificationSettings = ({
               </div>
               <ScrollArea className="h-64 rounded-md border">
                 <div className="p-4 space-y-2">
-                  {filteredFolders.map(folder => (
-                    <div key={folder.name} className="flex items-center gap-2 p-2 hover:bg-accent rounded-lg">
+                  {sortedAndFilteredFolders.map(folder => (
+                    <div
+                      key={folder.name}
+                      className={`flex items-center gap-2 p-2 hover:bg-accent rounded-lg ${monitoredFolders.includes(folder.name) ? 'bg-accent/50' : ''
+                        }`}
+                    >
                       <Switch
                         id={`folder-${folder.name}`}
                         checked={monitoredFolders.includes(folder.name)}
@@ -309,7 +318,7 @@ const NotificationSettings = ({
                       </Label>
                     </div>
                   ))}
-                  {filteredFolders.length === 0 && (
+                  {sortedAndFilteredFolders.length === 0 && (
                     <div className="text-center text-muted-foreground py-4">
                       No folders found matching your search
                     </div>
@@ -320,7 +329,6 @@ const NotificationSettings = ({
           </Card>
         </div>
       </DialogContent>
-      <CommitMonitor />
     </Dialog>
   );
 };

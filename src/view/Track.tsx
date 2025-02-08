@@ -1,5 +1,3 @@
-//@ts-nocheck
-
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, GitCommit as GitCommitIcon, RefreshCcw, Search } from "lucide-react";
@@ -45,7 +43,7 @@ const LoadingSpinner = ({ message }: { message?: string }) => (
 type CommitListSection = {
   loading: boolean;
   commits: BasicCommit[];
-  selectedFolder: string;
+  selectedFolder: string | null;
   onCommitClick: (commit: BasicCommit) => void;
   onLoadMore: () => void;
   hasMore: boolean;
