@@ -1,9 +1,8 @@
 //@ts-nocheck
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import FolderList from "@/components/folder-list";
-import { Loader2, GitCommit as GitCommitIcon, TimerReset, Search, RefreshCcw } from "lucide-react";
+import { Loader2, GitCommit as GitCommitIcon, RefreshCcw, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BasicCommit } from '@/types';
 import CommitList from '@/components/git-components/commit-list';
@@ -13,10 +12,7 @@ import SubHeader from '@/components/sub-header';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import Fuse from 'fuse.js';
 import NotificationSettings from '@/components/git-components/notification-settings';
-import ReloadButton from '@/components/git-components/reload-button';
 
 const CommitSearchInput = ({ value, onChange }: { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => (
   <Tooltip>
@@ -55,7 +51,6 @@ type CommitListSection = {
   hasMore: boolean;
 };
 
-
 const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick }: CommitListSection) => {
   if (loading || commits?.length === 0) {
     return <LoadingSpinner message="Loading commits..." />;
@@ -91,18 +86,29 @@ const GitHistory = ({ className }: { className?: string }) => {
     handleSearch,
     loadMore,
     hasMore,
-    setRemote,
-    setBranch,
-    references: { branches, remotes },
     notificationSettings,
     handleSettingsChange
   } = useGitHistory();
-  const [refreshing, setRefreshing] = useState(false);
 
+  const [refreshing, setRefreshing] = useState(false);
+  const [initializationLoading, setInitializationLoading] = useState(false);
+
+  const initializeNewCommits = useCallback(async () => {
+    if (selectedFolder) {
+      setInitializationLoading(true);
+      try {
+        await handleFolderClickForNewCommits(selectedFolder);
+      } finally {
+        setInitializationLoading(false);
+      }
+    }
+  }, [selectedFolder, handleFolderClickForNewCommits]);
 
   useEffect(() => {
-    handleFolderClickForNewCommits(selectedFolder);
-  }, [refreshing])
+    initializeNewCommits();
+  }, [refreshing, selectedFolder]);
+
+  const isLoading = loading || initializationLoading;
 
   return (
     <div className={cn("", className)}>
@@ -118,11 +124,11 @@ const GitHistory = ({ className }: { className?: string }) => {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setRefreshing(!refreshing)}
-            disabled={loading}
+            onClick={() => setRefreshing(prev => !prev)}
+            disabled={isLoading}
             className={className}
           >
-            <RefreshCcw className={`h-4 w-4 ${(loading) ? 'animate-spin' : ''}`} />
+            <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
           <NotificationSettings
             folders={folders}
@@ -136,7 +142,7 @@ const GitHistory = ({ className }: { className?: string }) => {
       <div className="grid grid-cols-4 h-[calc(100vh-8rem)]">
         <div className="p-4 col-span-4 overflow-scroll max-h-[calc(100vh-136px)] scrollbar-hide">
           <CommitListSection
-            loading={loading}
+            loading={isLoading}
             commits={commits}
             selectedFolder={selectedFolder}
             onCommitClick={handleCommitClickForNew}

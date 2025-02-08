@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Bell, Settings2, FolderGit2, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,15 +62,15 @@ const NotificationSettings = ({
     { value: '60', label: '1 hour' }
   ];
 
-  useEffect(() => {
-    if (onSettingsChange) {
-      onSettingsChange({
-        isEnabled,
-        checkInterval,
-        selectedFolders: Array.from(selectedFolders)
-      });
-    }
-  }, [isEnabled, checkInterval, selectedFolders]);
+  // useEffect(() => {
+  //   if (onSettingsChange) {
+  //     onSettingsChange({
+  //       isEnabled,
+  //       checkInterval,
+  //       selectedFolders
+  //     });
+  //   }
+  // }, [isEnabled, checkInterval, selectedFolders]);
 
   const handleFolderToggle = (folderName: string) => {
     setSelectedFolders(prev => {

@@ -1,6 +1,6 @@
 //@ts-nocheck
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import FolderList from "@/components/folder-list";
 import { Loader2, GitCommit as GitCommitIcon, TimerReset, Search } from "lucide-react";
@@ -14,8 +14,6 @@ import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import Fuse from 'fuse.js';
-// import NotificationSettings from '@/components/git-components/notification-settings';
 import ReloadButton from '@/components/git-components/reload-button';
 
 const RemoteSelect = ({ remotes = [], onValueChange }: { remotes: string[], onValueChange: (value: string) => void }) => (
@@ -117,10 +115,7 @@ const GitHistory = ({ className }: { className?: string }) => {
     loadMore,
     hasMore,
     setRemote,
-    setBranch,
-    references: { branches, remotes },
-    notificationSettings,
-    handleSettingsChange
+    references: { remotes },
   } = useGitHistory();
 
   return (
@@ -136,12 +131,6 @@ const GitHistory = ({ className }: { className?: string }) => {
           <RemoteSelect remotes={remotes} onValueChange={setRemote} />
           <CommitSearchInput value={searchQuery} onChange={handleSearch} />
           <ReloadButton />
-          {/* <NotificationSettings
-            folders={folders}
-            onSettingsChange={handleSettingsChange}
-            defaultInterval={notificationSettings.checkInterval}
-            defaultEnabledFolders={notificationSettings.monitoredFolders}
-          /> */}
         </div>
       </SubHeader>
 
