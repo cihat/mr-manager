@@ -165,7 +165,7 @@ const CommitMonitor: React.FC<CommitMonitorProps> = () => {
         : getAppsPath(monoRepoPath);
 
       // Get initial commits list with timeout
-      const newCommitsPromise = invoke('get_new_commits', {
+      const newCommitsPromise = await invoke('get_new_commits', {
         path: monoRepoPath,
         remote,
         branch
