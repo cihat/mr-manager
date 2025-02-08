@@ -1,6 +1,4 @@
-//@ts-nocheck
-
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Bell, Settings2, FolderGit2, Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,18 +30,12 @@ interface NotificationSettingsProps {
 
 const NotificationSettings = ({
   folders = [],
-  onSettingsChange,
-  defaultInterval = 15,
-  defaultEnabledFolders = []
 }: NotificationSettingsProps) => {
-  // const [isEnabled, setIsEnabled] = useState(true);
-  // const [checkInterval, setCheckInterval] = useState(defaultInterval);
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState('');
-  const { currentView, setCurrentView, monoRepoPath, updateNotificationSettings, notificationSettings } = useStore();
+  const { currentView, setCurrentView, updateNotificationSettings, notificationSettings } = useStore();
   const { monitoredFolders, checkInterval, isEnabled } = notificationSettings;
 
-  // Initialize Fuse instance for fuzzy search
   const fuse = useMemo(() => new Fuse(folders, {
     keys: ['name'],
     threshold: 0.3,
@@ -64,16 +56,6 @@ const NotificationSettings = ({
     { value: '60', label: '1 hour' }
   ];
 
-  // useEffect(() => {
-  //   if (onSettingsChange) {
-  //     onSettingsChange({
-  //       isEnabled,
-  //       checkInterval,
-  //       selectedFolders
-  //     });
-  //   }
-  // }, [isEnabled, checkInterval, selectedFolders]);
-
   const handleFolderToggle = (folderName: string) => {
     updateNotificationSettings({
       isEnabled,
@@ -81,19 +63,7 @@ const NotificationSettings = ({
       monitoredFolders: monitoredFolders.includes(folderName)
         ? monitoredFolders.filter(name => name !== folderName)
         : [...monitoredFolders, folderName]
-      // monitoredFolders: selectedFolders.has(folderName)
-      //   ? Array.from(selectedFolders).filter(name => name !== folderName)
-      //   : [...selectedFolders, folderName]
     })
-    // setSelectedFolders(prev => {
-    //   const newSet = new Set(prev);
-    //   if (newSet.has(folderName)) {
-    //     newSet.delete(folderName);
-    //   } else {
-    //     newSet.add(folderName);
-    //   }
-    //   return newSet;
-    // });
   };
 
   const handleIntervalChange = (value: string) => {
@@ -103,7 +73,6 @@ const NotificationSettings = ({
       return;
     }
     setError('');
-    // setCheckInterval(interval);
     updateNotificationSettings({
       isEnabled,
       checkInterval: interval,
@@ -248,12 +217,7 @@ const NotificationSettings = ({
           </Card>
         </div>
       </DialogContent>
-      <CommitMonitor
-        // selectedFolders={monitoredFolders}
-        // checkInterval={checkInterval}
-        // isEnabled={isEnabled}
-        // monoRepoPath={monoRepoPath}
-      />
+      <CommitMonitor />
     </Dialog>
   );
 };

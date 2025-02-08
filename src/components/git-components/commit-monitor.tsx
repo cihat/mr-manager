@@ -6,21 +6,21 @@ import { BasicCommit } from '@/types';
 import useAppStore from '@/store';
 import { notificationSound } from '@/lib/notification-sound';
 
-interface CommitMonitorProps {
-  selectedFolders: string[];
-  checkInterval: number;
-  isEnabled: boolean;
-  remote?: string;
-  branch?: string;
-  monoRepoPath: string;
-}
+// interface CommitMonitorProps {
+//   selectedFolders: string[];
+//   checkInterval: number;
+//   isEnabled: boolean;
+//   remote?: string;
+//   branch?: string;
+//   monoRepoPath: string;
+// }
 
 const BATCH_SIZE = 1;
 const BATCH_DELAY = 400;
 const MAX_COMMITS_TO_PROCESS = 30;
 const COMMIT_CHECK_TIMEOUT = 8000;
 
-const CommitMonitor: React.FC<CommitMonitorProps> = () => {
+const CommitMonitor: React.FC = () => {
   const [error, setError] = useState('');
   const [isChecking, setIsChecking] = useState(false);
   const abortController = useRef<AbortController | null>(null);
