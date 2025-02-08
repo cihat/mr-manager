@@ -10,6 +10,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { Badge } from "./ui/badge";
 
 export const items = [
   // {
@@ -38,6 +39,7 @@ export const items = [
     url: "/docs",
     icon: BookMarked,
     hasFolderPicker: true,
+    isBeta: true,
   },
 ]
 
@@ -62,6 +64,9 @@ export function AppSidebar() {
                       <span>{item.title}</span>
                       {item.isComingSoon && (
                         <span className="text-xs text-gray-400 ml-auto">Coming Soon</span>
+                      )}
+                      {item.isBeta && (
+                        <Badge className="ml-auto" variant="outline">Beta</Badge>
                       )}
                     </Link>
 
