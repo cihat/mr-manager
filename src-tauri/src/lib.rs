@@ -1,5 +1,5 @@
 mod git;
-use git::{GitReferences, LAST_FETCH_CACHE};
+use git::GitReferences;
 use git2::{DiffOptions, Oid, Repository};
 use serde::Serialize;
 use std::{
