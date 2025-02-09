@@ -24,7 +24,7 @@ const useGitHistory = () => {
   const checkInterval = useRef<number | null>(null);
   const perPage = 20;
 
-  const { monoRepoPath, currentView, folders, selectedFolder, notificationSettings, updateNotificationSettings, getLibsPath, getAppsPath, setSelectedFolder } = useAppStore();
+  const { monoRepoPath, folders, selectedFolder, notificationSettings, updateNotificationSettings, getPackagePath, setSelectedFolder } = useAppStore();
 
   //! Fix it this logic
   // useEffect(() => {
@@ -88,7 +88,7 @@ const useGitHistory = () => {
     setLoading(true);
     setCommits([]);
     setSelectedFolder(folder.name);
-    const basePath = currentView === "libs" ? getLibsPath(monoRepoPath) : getAppsPath(monoRepoPath);
+    const basePath = getPackagePath(monoRepoPath);
     const fullPath = `${basePath}/${folder.name}`;
     setCurrentRepoPath(fullPath);
     try {

@@ -21,21 +21,21 @@ interface StoreState {
   monoRepoPath: string;
   selectedFolder: string | null;
   error: string;
-  currentView: 'libs' | 'apps';
+  currentView: string; // Changed from 'libs' | 'apps' to string
   searchQuery: string;
   currentGeneratedFolder: string;
   folders: Folder[];
   docFolderName: string;
   favorites: string[];
   notificationSettings: NotificationSettings;
+  packageFolders: string[]; // New field to store available package folders
 }
 
 interface StoreActions {
-  getLibsPath: (monoRepoPath: string) => string;
-  getAppsPath: (monoRepoPath: string) => string;
+  getPackagePath: (monoRepoPath: string) => string; // Updated path getter
   setCurrentGeneratedFolder: (folderName: string) => void;
   setSearchQuery: (query: string) => void;
-  setCurrentView: (view: 'libs' | 'apps') => void;
+  setCurrentView: (view: string) => void; // Updated type
   setError: (error: string) => void;
   setMonoRepoPath: (path: string) => void;
   resetMonoRepoPath: () => void;
@@ -43,18 +43,20 @@ interface StoreActions {
   setFolders: (folders: Folder[]) => void;
   toggleFavorite: (folderName: string) => void;
   updateNotificationSettings: (settings: Partial<NotificationSettings>) => void;
+  setPackageFolders: (folders: string[]) => void; // New action
 }
 
 const initialState: StoreState = {
   monoRepoPath: '',
   selectedFolder: null,
   error: '',
-  currentView: 'apps',
+  currentView: '',
   searchQuery: '',
   currentGeneratedFolder: '',
   folders: [],
   docFolderName: '.mr-manager',
   favorites: [],
+  packageFolders: [], // Initialize empty package folders array
   notificationSettings: {
     isEnabled: true,
     soundEnabled: true,
@@ -68,14 +70,14 @@ const useStore = create<StoreState & StoreActions>()(
   persist(
     (set, get) => ({
       ...initialState,
-      getLibsPath: (monoRepoPath) => {
-        if (!monoRepoPath) return '';
-        return `${monoRepoPath}/packages/libs`;
+      getPackagePath: (monoRepoPath) => {
+        const { currentView } = get();
+
+        if (!monoRepoPath || !currentView) return '';
+
+        return `${monoRepoPath}/packages/${currentView}`;
       },
-      getAppsPath: (monoRepoPath) => {
-        if (!monoRepoPath) return '';
-        return `${monoRepoPath}/packages/apps`;
-      },
+      setPackageFolders: (folders) => set({ packageFolders: folders }),
       setFolders(folders) {
         const { favorites } = get();
         const foldersWithFavorites = folders.map(folder => ({
@@ -89,12 +91,10 @@ const useStore = create<StoreState & StoreActions>()(
           const favorites = state.favorites.includes(folderName)
             ? state.favorites.filter(name => name !== folderName)
             : [...state.favorites, folderName];
-
           const updatedFolders = state.folders.map(folder => ({
             ...folder,
             isFavorite: favorites.includes(folder.name)
           }));
-
           return { favorites, folders: updatedFolders };
         });
       },
@@ -121,7 +121,8 @@ const useStore = create<StoreState & StoreActions>()(
         currentView: state.currentView,
         selectedFolder: state.selectedFolder,
         favorites: state.favorites,
-        notificationSettings: state.notificationSettings
+        notificationSettings: state.notificationSettings,
+        packageFolders: state.packageFolders, // Add to persisted state
       }),
     }
   )

@@ -21,9 +21,7 @@ const CommitMonitor: React.FC = () => {
   const lastCheckedTimestamp = useRef<number>(0);
 
   const {
-    currentView,
-    getLibsPath,
-    getAppsPath,
+    getPackagePath,
     monoRepoPath,
     notificationSettings
   } = useAppStore();
@@ -125,7 +123,7 @@ const CommitMonitor: React.FC = () => {
   const checkNewCommitsRef = useRef(async () => {
     const now = Date.now();
     console.log('Checking new commits...');
-    
+
     if (now - lastCheckedTimestamp.current < checkInterval * 500) {
       return;
     }
@@ -155,9 +153,7 @@ const CommitMonitor: React.FC = () => {
         }
       }
 
-      const basePath = currentView === "libs"
-        ? getLibsPath(monoRepoPath)
-        : getAppsPath(monoRepoPath);
+      const basePath = getPackagePath(monoRepoPath);
 
       const newCommitsPromise = invoke('get_new_commits', {
         path: monoRepoPath,

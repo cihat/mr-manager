@@ -28,18 +28,18 @@ export const items = [
     hasFolderPicker: true,
   },
   {
-    title: "Track",
-    url: "/track",
-    icon: ViewIcon,
-    isComingSoon: false,
-    hasFolderPicker: false,
-  },
-  {
     title: "Docs",
     url: "/docs",
     icon: BookMarked,
     hasFolderPicker: true,
     isBeta: true,
+  },
+  {
+    title: "Track",
+    url: "/track",
+    icon: ViewIcon,
+    isComingSoon: false,
+    hasFolderPicker: false,
   },
 ]
 

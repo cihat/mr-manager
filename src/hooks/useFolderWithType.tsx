@@ -4,7 +4,7 @@ import useStore from "@/store";
 import { useToast } from "./use-toast";
 
 export const useFolderLoader = () => {
-  const { monoRepoPath, currentView, getLibsPath, getAppsPath, setFolders } = useStore();
+  const { monoRepoPath, currentView, getPackagePath, setFolders } = useStore();
   const [_folders, _setFolders] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
@@ -12,9 +12,8 @@ export const useFolderLoader = () => {
     const loadFolders = async () => {
       if (!monoRepoPath) return;
 
-      const basePath = currentView === "libs"
-        ? getLibsPath(monoRepoPath)
-        : getAppsPath(monoRepoPath);
+      const basePath = getPackagePath(monoRepoPath)
+      console.log('basePath >>', basePath);
 
       try {
         const entries = await readDir(basePath);
@@ -44,7 +43,7 @@ export const useFolderLoader = () => {
     };
 
     loadFolders();
-  }, [monoRepoPath, currentView, getLibsPath, getAppsPath, setFolders]);
+  }, [monoRepoPath, currentView, setFolders]);
 
   return { _folders };
 };
