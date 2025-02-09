@@ -50,7 +50,7 @@ const initialState: StoreState = {
   monoRepoPath: '',
   selectedFolder: null,
   error: '',
-  currentView: '',
+  currentView: 'apps',
   searchQuery: '',
   currentGeneratedFolder: '',
   folders: [],

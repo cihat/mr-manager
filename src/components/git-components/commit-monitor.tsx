@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 import { invoke } from '@tauri-apps/api/core';
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2 } from "lucide-react";
 import { BasicCommit } from '@/types';
 import useAppStore from '@/store';
 import { notificationSound } from '@/lib/notification-sound';
@@ -10,15 +11,16 @@ const BATCH_SIZE = 3;
 const BATCH_DELAY = 300;
 const MAX_COMMITS_TO_PROCESS = 60;
 const COMMIT_CHECK_TIMEOUT = 8000;
-
 const NOTIFIED_COMMITS_KEY = 'notifiedCommits';
 
 const CommitMonitor: React.FC = () => {
   const [error, setError] = useState('');
   const [isChecking, setIsChecking] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const abortController = useRef<AbortController | null>(null);
   const timerRef = useRef<number | null>(null);
   const lastCheckedTimestamp = useRef<number>(0);
+  const isFirstCheck = useRef<boolean>(true);
 
   const {
     getPackagePath,
@@ -68,7 +70,6 @@ const CommitMonitor: React.FC = () => {
     basePath: string,
     signal: AbortSignal
   ) => {
-    // Filter out already notified commits first
     const newCommits = commits.filter(commit => !isCommitNotified(commit.id));
 
     if (newCommits.length === 0) {
@@ -78,7 +79,6 @@ const CommitMonitor: React.FC = () => {
     for (const commit of newCommits) {
       if (signal.aborted) break;
 
-      // Double check if commit is still not notified
       if (isCommitNotified(commit.id)) {
         continue;
       }
@@ -99,7 +99,6 @@ const CommitMonitor: React.FC = () => {
           if (details.changes.some((files: { file: string; }) =>
             files.file.includes(folder)
           )) {
-            // Final check before notification
             if (!isCommitNotified(commit.id)) {
               await notificationSound();
               await sendNotification({
@@ -107,7 +106,7 @@ const CommitMonitor: React.FC = () => {
                 body: `${commit.author}: ${commit.message}`,
               });
               addNotifiedCommit(commit.id);
-              break; // Exit folder loop after notification
+              break;
             }
           }
         } catch (error) {
@@ -124,11 +123,12 @@ const CommitMonitor: React.FC = () => {
     const now = Date.now();
     console.log('Checking new commits...');
 
-    if (now - lastCheckedTimestamp.current < checkInterval * 500) {
+    if (!isFirstCheck.current && now - lastCheckedTimestamp.current < checkInterval * 500) {
       return;
     }
 
-    if (!isEnabled || selectedFolders.length === 0 || isChecking) {
+    if (!isEnabled || selectedFolders.length === 0 || (isChecking && !isFirstCheck.current)) {
+      setIsInitializing(false);
       return;
     }
 
@@ -149,6 +149,7 @@ const CommitMonitor: React.FC = () => {
         const permission = await requestPermission();
         if (permission !== 'granted') {
           setIsChecking(false);
+          setIsInitializing(false);
           return;
         }
       }
@@ -172,13 +173,14 @@ const CommitMonitor: React.FC = () => {
 
       if (signal.aborted) return;
 
-      // Filter already notified commits
       newCommits = newCommits
         .filter(commit => !isCommitNotified(commit.id))
         .slice(0, MAX_COMMITS_TO_PROCESS);
 
       if (newCommits.length === 0) {
         setIsChecking(false);
+        setIsInitializing(false);
+        isFirstCheck.current = false;
         return;
       }
 
@@ -200,11 +202,12 @@ const CommitMonitor: React.FC = () => {
     } finally {
       if (!signal.aborted) {
         setIsChecking(false);
+        setIsInitializing(false);
+        isFirstCheck.current = false;
       }
     }
   });
 
-  // Cleanup effect
   useEffect(() => {
     return () => {
       if (abortController.current) {
@@ -216,7 +219,6 @@ const CommitMonitor: React.FC = () => {
     };
   }, []);
 
-  // Timer effect
   useEffect(() => {
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current);
@@ -237,6 +239,15 @@ const CommitMonitor: React.FC = () => {
       }
     };
   }, [isEnabled, checkInterval]);
+
+  if (isInitializing) {
+    return (
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="h-4 w-4 animate-spin" />
+        <span>Checking for new commits...</span>
+      </div>
+    );
+  }
 
   if (error) {
     return (

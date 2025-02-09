@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import NotificationSettings from '@/components/git-components/notification-settings';
+import useStore from '@/store';
 
 const CommitSearchInput = ({ value, onChange }: { value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => (
   <Tooltip>
@@ -50,7 +51,7 @@ type CommitListSection = {
 };
 
 const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick }: CommitListSection) => {
-  if (loading || commits?.length === 0) {
+  if (loading) {
     return <LoadingSpinner message="Loading commits..." />;
   }
 
@@ -88,10 +89,14 @@ const GitHistory = ({ className }: { className?: string }) => {
     handleSettingsChange
   } = useGitHistory();
 
+  const { monoRepoPath } = useStore();
+
   const [refreshing, setRefreshing] = useState(false);
   const [initializationLoading, setInitializationLoading] = useState(false);
 
   const initializeNewCommits = useCallback(async () => {
+    if (!monoRepoPath) return;
+
     setInitializationLoading(true);
     try {
       await handleFolderClickForNewCommits();
@@ -102,7 +107,7 @@ const GitHistory = ({ className }: { className?: string }) => {
 
   useEffect(() => {
     initializeNewCommits();
-  }, [refreshing]);
+  }, [refreshing, monoRepoPath]);
 
   const isLoading = loading || initializationLoading;
 
