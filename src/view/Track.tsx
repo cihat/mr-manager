@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback } from 'react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, GitCommit as GitCommitIcon, RefreshCcw, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -48,9 +48,10 @@ type CommitListSection = {
   onCommitClick: (commit: BasicCommit) => void;
   onLoadMore: () => void;
   hasMore: boolean;
+  initializeNewCommits: () => void;
 };
 
-const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick }: CommitListSection) => {
+const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick, initializeNewCommits }: CommitListSection) => {
   if (loading) {
     return <LoadingSpinner message="Loading commits..." />;
   }
@@ -58,6 +59,7 @@ const CommitListSection = ({ loading, commits, selectedFolder, onCommitClick }: 
   if (commits?.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+        <RefreshCcw className="w-20 h-20 mb-4 cursor-pointer" onClick={initializeNewCommits} />
         <GitCommitIcon className="w-8 h-8 mb-2" />
         <p>{selectedFolder ? 'No new commits found' : 'Select a folder to view new commits'}</p>
       </div>
@@ -91,25 +93,14 @@ const GitHistory = ({ className }: { className?: string }) => {
 
   const { monoRepoPath } = useStore();
 
-  const [refreshing, setRefreshing] = useState(false);
-  const [initializationLoading, setInitializationLoading] = useState(false);
-
   const initializeNewCommits = useCallback(async () => {
     if (!monoRepoPath) return;
-
-    setInitializationLoading(true);
     try {
       await handleFolderClickForNewCommits();
-    } finally {
-      setInitializationLoading(false);
+    } catch (error) {
+      console.error('Failed to check for new commits:', error);
     }
-  }, [selectedFolder, handleFolderClickForNewCommits]);
-
-  useEffect(() => {
-    initializeNewCommits();
-  }, [refreshing, monoRepoPath]);
-
-  const isLoading = loading || initializationLoading;
+  }, [monoRepoPath]);
 
   return (
     <div className={cn("", className)}>
@@ -125,11 +116,11 @@ const GitHistory = ({ className }: { className?: string }) => {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => setRefreshing(prev => !prev)}
-            disabled={isLoading}
+            onClick={initializeNewCommits}
+            disabled={loading}
             className={className}
           >
-            <RefreshCcw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
           <NotificationSettings
             folders={folders}
@@ -143,12 +134,13 @@ const GitHistory = ({ className }: { className?: string }) => {
       <div className="grid grid-cols-4 h-[calc(100vh-8rem)]">
         <div className="p-4 col-span-4 overflow-scroll max-h-[calc(100vh-136px)] scrollbar-hide">
           <CommitListSection
-            loading={isLoading}
+            loading={loading}
             commits={commits}
             selectedFolder={selectedFolder}
             onCommitClick={handleCommitClickForNew}
             onLoadMore={loadMore}
             hasMore={hasMore}
+            initializeNewCommits={initializeNewCommits}
           />
         </div>
       </div>

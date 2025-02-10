@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { BasicCommit } from '@/types';
 import useAppStore from '@/store';
 import { notificationSound } from '@/lib/notification-sound';
+import useGitHistory from '@/hooks/useGithubHistory';
 
 const BATCH_SIZE = 3;
 const BATCH_DELAY = 300;
@@ -22,6 +23,8 @@ const CommitMonitor: React.FC = () => {
   const lastCheckedTimestamp = useRef<number>(0);
   const isFirstCheck = useRef<boolean>(true);
 
+  const { setCommits } = useGitHistory();
+
   const {
     getPackagePath,
     monoRepoPath,
@@ -33,7 +36,8 @@ const CommitMonitor: React.FC = () => {
   const {
     monitoredFolders: selectedFolders,
     checkInterval,
-    isEnabled
+    isEnabled,
+    enableAllFolderNotifications
   } = notificationSettings;
 
   // Get notified commits from localStorage
@@ -95,6 +99,20 @@ const CommitMonitor: React.FC = () => {
             changes: any;
             files: { path: string }[];
           };
+
+          //! Refactor this to use a better check
+          if (enableAllFolderNotifications) {
+            if (!isCommitNotified(commit.id)) {
+              await notificationSound();
+              await sendNotification({
+                title: `New Commit in ${folder}`,
+                body: `${commit.author}: ${commit.message}`,
+              });
+              addNotifiedCommit(commit.id);
+              break;
+            }
+            return;
+          }
 
           if (details.changes.some((files: { file: string; }) =>
             files.file.includes(folder)
@@ -183,6 +201,8 @@ const CommitMonitor: React.FC = () => {
         isFirstCheck.current = false;
         return;
       }
+
+      setCommits(prevCommits => [...newCommits, ...prevCommits]);
 
       for (let i = 0; i < newCommits.length; i += BATCH_SIZE) {
         if (signal.aborted) break;

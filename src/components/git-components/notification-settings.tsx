@@ -34,7 +34,7 @@ const NotificationSettings = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [error, setError] = useState('');
   const { updateNotificationSettings, notificationSettings } = useStore();
-  const { monitoredFolders, checkInterval, isEnabled, soundEnabled, selectedSound } = notificationSettings;
+  const { monitoredFolders, checkInterval, isEnabled, soundEnabled, selectedSound, enableAllFolderNotifications } = notificationSettings;
 
   // Available notification sounds
   const availableSounds = [
@@ -174,6 +174,15 @@ const NotificationSettings = ({
                 onCheckedChange={() => updateNotificationSettings({
                   ...notificationSettings,
                   isEnabled: !isEnabled
+                })}
+              />
+              <Label htmlFor="notifications-enabled">Enable All Commit Notifications</Label>
+              <Switch
+                id="notifications-enabled"
+                checked={enableAllFolderNotifications}
+                onCheckedChange={() => updateNotificationSettings({
+                  ...notificationSettings,
+                  enableAllFolderNotifications: !enableAllFolderNotifications
                 })}
               />
             </CardContent>

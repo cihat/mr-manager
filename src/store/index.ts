@@ -15,6 +15,7 @@ export interface NotificationSettings {
   checkInterval: number;
   monitoredFolders: string[];
   selectedSound: string;
+  enableAllFolderNotifications: boolean;
 }
 
 interface StoreState {
@@ -60,6 +61,7 @@ const initialState: StoreState = {
   notificationSettings: {
     isEnabled: true,
     soundEnabled: true,
+    enableAllFolderNotifications: false,
     selectedSound: 'sweet-kitty-meow',
     checkInterval: 15,
     monitoredFolders: []
