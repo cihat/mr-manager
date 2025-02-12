@@ -103,7 +103,7 @@ const CommitMonitor: React.FC = () => {
           //! Refactor this to use a better check
           if (enableAllFolderNotifications) {
             if (!isCommitNotified(commit.id)) {
-              await notificationSound();
+              await notificationSound(notificationSettings.selectedSound);
               await sendNotification({
                 title: `New Commit in ${folder}`,
                 body: `${commit.author}: ${commit.message}`,
@@ -118,7 +118,7 @@ const CommitMonitor: React.FC = () => {
             files.file.includes(folder)
           )) {
             if (!isCommitNotified(commit.id)) {
-              await notificationSound();
+              await notificationSound(notificationSettings.selectedSound);
               await sendNotification({
                 title: `New Commit in ${folder}`,
                 body: `${commit.author}: ${commit.message}`,
