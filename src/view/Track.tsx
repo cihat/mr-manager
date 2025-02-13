@@ -89,7 +89,8 @@ const GitHistory = ({ className }: { className?: string }) => {
     loadMore,
     hasMore,
     notificationSettings,
-    handleSettingsChange
+    handleSettingsChange,
+    handleNextCommit
   } = useGitHistory();
 
   const { monoRepoPath } = useStore();
@@ -152,6 +153,7 @@ const GitHistory = ({ className }: { className?: string }) => {
         selectedCommit={selectedCommit}
         detailsLoading={detailsLoading}
         currentRepoPath={currentRepoPath}
+        onNextCommit={handleNextCommit}
       />
     </div>
   );

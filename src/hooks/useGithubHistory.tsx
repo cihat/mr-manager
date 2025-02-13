@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
 
 import { invoke } from '@tauri-apps/api/core';
@@ -252,6 +252,26 @@ const useGitHistory = () => {
     }
   };
 
+  const handleNextCommit = useCallback(() => {
+    if (!selectedCommit || !commits.length) return;
+
+    // Find the current commit index
+    const currentIndex = commits.findIndex(
+      commit => commit.id === selectedCommit.id
+    );
+
+    // If there's a next commit, select it
+    if (currentIndex !== -1 && currentIndex < commits.length - 1) {
+      handleCommitClickForNew(commits[currentIndex + 1]);
+    }
+    const hasMore = commits?.length >= currentPage * perPage;
+
+    // If we're near the end, load more commits if available
+    if (currentIndex >= commits.length - 3 && hasMore) {
+      loadMore();
+    }
+  }, [selectedCommit, commits, handleCommitClickForNew, loadMore]);
+
 
   return {
     loading,
@@ -279,7 +299,8 @@ const useGitHistory = () => {
     setBranch,
     setRemote,
     handleSettingsChange,
-    handleFolderClickForNewCommits
+    handleFolderClickForNewCommits,
+    handleNextCommit
   };
 };
 

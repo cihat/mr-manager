@@ -116,6 +116,7 @@ const GitHistory = ({ className }: { className?: string }) => {
     hasMore,
     setRemote,
     references: { remotes },
+    handleNextCommit
   } = useGitHistory();
 
   return (
@@ -162,6 +163,7 @@ const GitHistory = ({ className }: { className?: string }) => {
         selectedCommit={selectedCommit}
         detailsLoading={detailsLoading}
         currentRepoPath={currentRepoPath}
+        onNextCommit={handleNextCommit}
       />
     </div>
   );

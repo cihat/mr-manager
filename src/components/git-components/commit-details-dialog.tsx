@@ -1,16 +1,25 @@
 import CommitDetails from '@/components/git-components/commit-details';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DetailedCommit } from '@/types';
-
 import { Loader2 } from "lucide-react";
 
-const CommitDetailsDialog: React.FC<{
+interface CommitDetailsDialogProps {
   isDetailsOpen: boolean;
   setIsDetailsOpen: (open: boolean) => void;
   selectedCommit: DetailedCommit | null;
   detailsLoading: boolean;
   currentRepoPath: string;
-}> = ({ isDetailsOpen, setIsDetailsOpen, selectedCommit, detailsLoading, currentRepoPath }) => (
+  onNextCommit: () => void;
+}
+
+const CommitDetailsDialog: React.FC<CommitDetailsDialogProps> = ({
+  isDetailsOpen,
+  setIsDetailsOpen,
+  selectedCommit,
+  detailsLoading,
+  currentRepoPath,
+  onNextCommit
+}) => (
   <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
     <DialogContent className="max-w-[90vw] h-[90vh] p-6 block" aria-describedby='commit-details' aria-description='commit-details'>
       <DialogHeader>
@@ -22,7 +31,11 @@ const CommitDetailsDialog: React.FC<{
         </div>
       ) : selectedCommit && (
         <div className="h-[calc(90vh-8rem)]">
-          <CommitDetails commit={selectedCommit} repoPath={currentRepoPath} />
+          <CommitDetails
+            commit={selectedCommit}
+            repoPath={currentRepoPath}
+            onNextCommit={onNextCommit}
+          />
         </div>
       )}
     </DialogContent>
