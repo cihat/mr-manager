@@ -75,6 +75,7 @@ const GitHistory = ({ className }: { className?: string }) => {
     detailsLoading,
     error,
     commits,
+    setCommits,
     selectedCommit,
     isDetailsOpen,
     currentRepoPath,
@@ -100,7 +101,7 @@ const GitHistory = ({ className }: { className?: string }) => {
     } catch (error) {
       console.error('Failed to check for new commits:', error);
     }
-  }, [monoRepoPath]);
+  }, [monoRepoPath, setCommits]);
 
   return (
     <div className={cn("", className)}>
