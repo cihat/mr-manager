@@ -59,6 +59,7 @@ const NotificationSettings = ({
     { value: 'little-cat-attention-meow', label: 'Little Cat Attention Meow' },
     { value: 'little-cat-pain-meow', label: 'Little Cat Pain Meow' },
     { value: 'sweet-kitty-meow', label: 'Sweet Kitty Meow' },
+    { value: 'ramizdayi', label: 'Ramiz Dayi' },
   ];
 
   // Interval presets for dropdown
